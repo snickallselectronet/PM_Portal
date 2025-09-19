@@ -82,7 +82,7 @@ const handleLogin = async () => {
   try {
     console.log('Making fetch request to /api/auth/login')
     
-    const response = await $fetch('/api/auth/login', {
+    const response = await $fetch('/api/login', {
       method: 'POST',
       body: credentials.value
     })

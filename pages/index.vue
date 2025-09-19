@@ -4,7 +4,7 @@
       <header class="mb-8 flex justify-between items-center">
         <div>
           <h1 class="text-3xl font-bold text-gray-900 mb-2">Job Search</h1>
-          <p class="text-gray-600">Search work orders from WO_POLE and AuroraTXFRandCable</p>
+          <p class="text-gray-600">Search work orders from WO_POLE and Aurora systems</p>
         </div>
         <button
           @click="handleLogout"
@@ -101,7 +101,6 @@ const handleSummaryClick = (filter) => {
 
 const handleJobUpdated = (updatedJob) => {
   console.log('Job updated:', updatedJob.WONUM, 'Progress:', updatedJob.PROGRESS)
-  updateJob(updatedJob)
 }
 
 // Computed properties with better defensive checks
@@ -124,7 +123,7 @@ const handleLogout = async () => {
   console.log('=== LOGOUT CLICKED ===')
   try {
     console.log('Calling logout API...')
-    await $fetch('/api/auth/logout', {
+    await $fetch('/api/logout', {
       method: 'POST'
     })
     console.log('Logout API successful')
