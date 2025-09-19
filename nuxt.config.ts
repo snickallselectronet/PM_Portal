@@ -1,7 +1,10 @@
 export default defineNuxtConfig({
   devtools: { enabled: true },
   modules: ['@nuxtjs/tailwindcss'],
-  ssr: false, // Disable SSR to avoid middleware issues during development
+  ssr: false,
+  nitro: {
+    preset: 'netlify'
+  },
   runtimeConfig: {
     arcgisWoPoleUrl: process.env.ARCGIS_WO_POLE_URL,
     arcgisAuroraUrl: process.env.ARCGIS_AURORA_URL,
@@ -13,8 +16,5 @@ export default defineNuxtConfig({
     public: {
       apiBase: '/api'
     }
-  },
-  nitro: {
-    preset: 'netlify'
   }
 })
