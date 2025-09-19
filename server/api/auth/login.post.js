@@ -15,7 +15,7 @@ export default defineEventHandler(async (event) => {
     throw createError({
       statusCode: 400,
       statusMessage: 'Username and password are required'
-    })
+    })  
   }
   
   // Check credentials against .env values
