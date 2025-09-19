@@ -1,13 +1,4 @@
 export default defineEventHandler(async (event) => {
-  // Check authentication
-  const authCookie = getCookie(event, 'auth-token')
-  if (!authCookie || authCookie !== 'authenticated') {
-    throw createError({
-      statusCode: 401,
-      statusMessage: 'Authentication required'
-    })
-  }
-
   const config = useRuntimeConfig()
   const jobId = getRouterParam(event, 'id')
   const body = await readBody(event)
