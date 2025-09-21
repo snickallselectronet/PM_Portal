@@ -1,10 +1,6 @@
 export default defineNuxtConfig({
   devtools: { enabled: true },
   modules: ['@nuxtjs/tailwindcss'],
-  ssr: false,
-  nitro: {
-    preset: 'netlify'
-  },
   runtimeConfig: {
     // Server-side only (private)
     arcgisWoPoleUrl: process.env.ARCGIS_WO_POLE_URL,
