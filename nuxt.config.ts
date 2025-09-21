@@ -9,6 +9,9 @@ export default defineNuxtConfig({
     arcgisClientId: process.env.ARCGIS_CLIENT_ID,
     arcgisClientSecret: process.env.ARCGIS_CLIENT_SECRET,
     arcgisTokenUrl: process.env.ARCGIS_TOKEN_URL,
+    jwtSecret: process.env.JWT_SECRET,
+    authUser: process.env.AUTH_USERNAME,
+    authPass: process.env.AUTH_PASSWORD,
     public: {
       apiBase: '/api'
     }
