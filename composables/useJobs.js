@@ -6,14 +6,10 @@ export const useJobs = () => {
   const error = ref(null)
   const currentFilter = ref('all')
 
-  // abort controller to cancel previous search
   let abortCtrl = null
 
   const searchJobs = async (searchTerm = '') => {
-    // cancel prior in-flight request
-    if (abortCtrl) {
-      try { abortCtrl.abort() } catch {}
-    }
+    if (abortCtrl) { try { abortCtrl.abort() } catch {} }
     abortCtrl = new AbortController()
 
     loading.value = true
@@ -21,23 +17,22 @@ export const useJobs = () => {
 
     try {
       const { public: pub } = useRuntimeConfig()
+      // Ensure pub.apiBase is '/api' (or set BASE = '/api' directly)
+      const BASE = `${pub.apiBase || '/api'}/jobs`
 
-      const res = await $fetch(`${pub.apiBase}/jobs`, {
+      const res = await $fetch(BASE, {
         method: 'GET',
-        query: { search: String(searchTerm || '') },
+        // Send both keys so we’re compatible with either server impl
+        query: { q: String(searchTerm || ''), search: String(searchTerm || '') },
         signal: abortCtrl.signal
       })
 
-      // Defensive: ensure expected shape
-      const list = Array.isArray(res?.jobs) ? res.jobs : []
-      allJobs.value = [...list] // new reference for reactivity
+      // Accept either an array or { jobs: [...] }
+      const list = Array.isArray(res) ? res : (Array.isArray(res?.jobs) ? res.jobs : [])
+      allJobs.value = [...list]
       applyFilter(currentFilter.value)
     } catch (err) {
-      if (err?.name === 'AbortError') {
-        // Silently ignore aborted requests
-        return
-      }
-      // Normalize error for UI
+      if (err?.name === 'AbortError') return
       const status = err?.status || err?.response?.status
       const msg =
         err?.data?.statusMessage ||
@@ -46,8 +41,6 @@ export const useJobs = () => {
         (status ? `Request failed (${status})` : 'Failed to fetch jobs')
       error.value = msg
       console.error('Error fetching jobs:', err)
-      // Clear on hard errors if you prefer:
-      // allJobs.value = []; jobs.value = []
     } finally {
       loading.value = false
     }
@@ -59,45 +52,27 @@ export const useJobs = () => {
   }
 
   const applyFilter = (sourceFilter) => {
-    if (!Array.isArray(allJobs.value)) {
-      jobs.value = []
-      return
-    }
-    if (sourceFilter === 'all') {
-      jobs.value = [...allJobs.value]
-    } else {
-      jobs.value = allJobs.value.filter(j => j?.source === sourceFilter)
-    }
+    if (!Array.isArray(allJobs.value)) { jobs.value = []; return }
+    jobs.value = sourceFilter === 'all'
+      ? [...allJobs.value]
+      : allJobs.value.filter(j => j?.source === sourceFilter)
   }
 
-  // Update a job instance already in memory
   const updateJob = (updatedJob) => {
     if (!updatedJob) return
-
     const match = (job) =>
       job?.OBJECTID === updatedJob?.OBJECTID && job?.source === updatedJob?.source
 
-    // Update in allJobs
     if (Array.isArray(allJobs.value)) {
       const i = allJobs.value.findIndex(match)
-      if (i !== -1) {
-        allJobs.value[i] = { ...allJobs.value[i], ...updatedJob }
-        // ensure reactivity in Vue 3 reactivity caveats
-        allJobs.value = [...allJobs.value]
-      }
+      if (i !== -1) { allJobs.value[i] = { ...allJobs.value[i], ...updatedJob }; allJobs.value = [...allJobs.value] }
     }
-
-    // Update in current filtered list
     if (Array.isArray(jobs.value)) {
       const j = jobs.value.findIndex(match)
-      if (j !== -1) {
-        jobs.value[j] = { ...jobs.value[j], ...updatedJob }
-        jobs.value = [...jobs.value]
-      }
+      if (j !== -1) { jobs.value[j] = { ...jobs.value[j], ...updatedJob }; jobs.value = [...jobs.value] }
     }
   }
 
-  // Optional: convenience to fully reset state
   const resetJobs = () => {
     jobs.value = []
     allJobs.value = []
@@ -105,15 +80,5 @@ export const useJobs = () => {
     error.value = null
   }
 
-  return {
-    jobs,
-    allJobs,
-    loading,
-    error,
-    currentFilter,
-    searchJobs,
-    filterJobs,
-    updateJob,
-    resetJobs
-  }
+  return { jobs, allJobs, loading, error, currentFilter, searchJobs, filterJobs, updateJob, resetJobs }
 }
