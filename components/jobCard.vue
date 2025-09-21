@@ -2,7 +2,7 @@
   <div class="bg-white rounded-lg shadow-md p-6 border border-gray-200 hover:shadow-lg transition-shadow">
     <div class="flex justify-between items-start mb-4">
       <div>
-        <h3 class="text-lg font-semibold text-gray-900">{{ job.WONUM }}</h3>
+        <h3 class="text-lg font-semibold text-gray-900">{{ job.WONUM || '—' }}</h3>
         <p v-if="job.PARENTWONUM" class="text-sm text-gray-600">Parent: {{ job.PARENTWONUM }}</p>
       </div>
       <span class="px-3 py-1 text-sm font-bold rounded-full" :class="sourceClass">
@@ -18,7 +18,7 @@
 
       <div v-if="job.LONG_DESCRIPTION">
         <label class="text-sm font-medium text-gray-700">Details:</label>
-        <p class="text-sm text-gray-900">{{ job.LONG_DESCRIPTION }}</p>
+        <p class="text-sm text-gray-900 whitespace-pre-line">{{ job.LONG_DESCRIPTION }}</p>
       </div>
 
       <div class="grid grid-cols-2 gap-4 mt-4 text-sm">
@@ -27,8 +27,9 @@
           <select
             v-model="localProgress"
             @change="updateProgress"
-            :disabled="updating"
+            :disabled="updating || !isUpdatable"
             class="mt-1 block w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
+            aria-label="Update job progress"
           >
             <option value="INPRG">In Progress</option>
             <option value="COMP">Complete</option>
@@ -55,7 +56,7 @@
 
       <div v-if="job.COMMENTS" class="mt-3 pt-3 border-t border-gray-200">
         <label class="text-sm font-medium text-gray-700">Comments:</label>
-        <p class="text-sm text-gray-900">{{ job.COMMENTS }}</p>
+        <p class="text-sm text-gray-900 whitespace-pre-line">{{ job.COMMENTS }}</p>
       </div>
     </div>
   </div>
@@ -69,91 +70,90 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['jobUpdated'])
+// IMPORTANT: matches parent listener @job-updated
+const emit = defineEmits(['job-updated'])
 
-const localProgress = ref(props.job.PROGRESS || 'INPRG')
+const { public: pub } = useRuntimeConfig()
+
+const localProgress = ref(props.job?.PROGRESS || 'INPRG')
 const updating = ref(false)
 const updateError = ref('')
 
-// Watch for changes to the job prop and update localProgress accordingly
-watch(() => props.job.PROGRESS, (newProgress) => {
-  localProgress.value = newProgress || 'INPRG'
-}, { immediate: true })
+// Reflect prop changes into local state
+watch(
+  () => props.job?.PROGRESS,
+  (newVal) => { localProgress.value = newVal || 'INPRG' },
+  { immediate: true }
+)
 
-const sourceClass = computed(() => {
-  return props.job.source === 'WO_POLE' 
-    ? 'bg-blue-100 text-blue-800 border border-blue-200' 
+const isUpdatable = computed(() => {
+  // Must have numeric OBJECTID and valid source (WO_POLE | AURORA)
+  const hasId = Number.isFinite(Number(props.job?.OBJECTID))
+  const validSource = ['WO_POLE', 'AURORA'].includes(String(props.job?.source || '').toUpperCase())
+  return hasId && validSource
+})
+
+const sourceClass = computed(() =>
+  (props.job?.source === 'WO_POLE')
+    ? 'bg-blue-100 text-blue-800 border border-blue-200'
     : 'bg-green-100 text-green-800 border border-green-200'
-})
+)
 
-const sourceLabel = computed(() => {
-  return props.job.source === 'WO_POLE' 
-    ? 'WO_POLE' 
-    : 'AuroraTXFRandCable'
-})
+const sourceLabel = computed(() =>
+  (props.job?.source === 'WO_POLE') ? 'WO_POLE' : 'AuroraTXFRandCable'
+)
 
-const formatDate = (timestamp) => {
-  if (!timestamp) return ''
-  const date = new Date(timestamp)
-  return date.toLocaleDateString()
+function formatDate(input) {
+  if (!input) return ''
+  // ArcGIS often returns epoch ms; may also be ISO
+  const ts = Number(input)
+  const date = Number.isFinite(ts) ? new Date(ts) : new Date(String(input))
+  return isNaN(date.getTime()) ? '' : date.toLocaleDateString()
 }
 
-const updateProgress = async () => {
-  const originalProgress = props.job.PROGRESS
-  
-  console.log('=== FRONTEND UPDATE DEBUG ===')
-  console.log('Job:', props.job.WONUM)
-  console.log('Source:', props.job.source)
-  console.log('OBJECTID:', props.job.OBJECTID)
-  console.log('Original Progress:', originalProgress)
-  console.log('New Progress:', localProgress.value)
-  
-  if (localProgress.value === originalProgress) {
-    console.log('No change detected, skipping update')
-    return // No change
+async function updateProgress() {
+  // Basic no-op guard
+  const original = props.job?.PROGRESS
+  const next = localProgress.value
+
+  if (next === original) return
+  if (!isUpdatable.value) {
+    updateError.value = 'Job is not updatable (missing OBJECTID or source)'
+    localProgress.value = original || 'INPRG'
+    return
   }
 
   updating.value = true
   updateError.value = ''
 
-  const requestBody = {
-    progress: localProgress.value,
-    source: props.job.source
+  const objectId = Number(props.job.OBJECTID)
+  const body = {
+    progress: String(next || '').toUpperCase(),
+    source: String(props.job.source || '').toUpperCase()
   }
-  
-  console.log('Request body:', JSON.stringify(requestBody, null, 2))
-  console.log('API URL:', `/api/jobs/${props.job.OBJECTID}`)
 
   try {
-    console.log('Sending PATCH request...')
-    const response = await $fetch(`/api/jobs/${props.job.OBJECTID}`, {
+    const res = await $fetch(`${pub.apiBase}/jobs/${objectId}`, {
       method: 'PATCH',
-      body: requestBody
+      body
     })
 
-    console.log('✅ API Response:', response)
-
-    // Emit the updated job data to parent
-    emit('jobUpdated', {
+    // optimistic succeeded — tell parent to sync stores
+    emit('job-updated', {
       ...props.job,
-      PROGRESS: localProgress.value
+      PROGRESS: body.progress
     })
-
-    console.log(`✅ Job ${props.job.WONUM} progress updated to ${localProgress.value}`)
-
-  } catch (error) {
-    console.error('❌ Error updating progress:', error)
-    console.error('Error details:', {
-      status: error.status,
-      statusCode: error.statusCode,
-      statusText: error.statusText,
-      message: error.message,
-      data: error.data
-    })
-    
-    updateError.value = `Failed to update progress: ${error.statusText || error.message}`
-    // Revert the local value to original
-    localProgress.value = originalProgress
+  } catch (err) {
+    // Try to surface a meaningful message
+    const msg =
+      err?.data?.statusMessage ||
+      err?.statusMessage ||
+      err?.message ||
+      'Failed to update progress'
+    updateError.value = msg
+    // revert UI
+    localProgress.value = original || 'INPRG'
+    console.error('Update progress error:', err)
   } finally {
     updating.value = false
   }
