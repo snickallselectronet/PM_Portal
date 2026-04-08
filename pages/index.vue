@@ -8,6 +8,17 @@
         </div>
       </header>
 
+      <!-- Debug Info -->
+      <div class="mb-6 border-2 border-dashed border-green-500 rounded-lg p-3 bg-green-50">
+        <p class="text-xs font-mono text-green-800 font-semibold mb-1">🛠 Debug Info</p>
+        <div class="text-xs font-mono text-green-700 space-y-0.5">
+          <div><span class="text-green-500">app:</span> nuxt-app</div>
+          <div><span class="text-green-500">nuxt:</span> ^4.1.2 &nbsp;|&nbsp; <span class="text-green-500">vue:</span> 3.5.21</div>
+          <div><span class="text-green-500">built:</span> {{ buildTime }}</div>
+          <div><span class="text-green-500">filter:</span> {{ activeFilter }}</div>
+        </div>
+      </div>
+
       <!-- Search -->
       <SearchBar @search="handleSearch" />
 
@@ -93,6 +104,9 @@ const { jobs, allJobs, loading, error, searchJobs, filterJobs, updateJob } = use
 // Filter state
 const activeFilter = ref('all')
 
+// Debug
+const buildTime = ref('')
+  
 // Debounce search so we don't hammer the function while typing
 let searchTimer = null
 const debouncedSearch = (term) => {
@@ -104,6 +118,7 @@ const debouncedSearch = (term) => {
 
 // Initial load (client-only to avoid SSR calling external services)
 onMounted(() => {
+  buildTime.value = new Date().toISOString()
   searchJobs()
 })
 
