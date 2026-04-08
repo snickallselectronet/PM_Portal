@@ -17,22 +17,20 @@ export const useJobs = () => {
 
     try {
       const { public: pub } = useRuntimeConfig()
-      // Ensure pub.apiBase is '/api' (or set BASE = '/api' directly)
       const BASE = `${pub.apiBase || '/api'}/jobs`
 
       const res = await $fetch(BASE, {
         method: 'GET',
-        // Send both keys so we’re compatible with either server impl
         query: { q: String(searchTerm || ''), search: String(searchTerm || '') },
         signal: abortCtrl.signal
       })
 
-      // Accept either an array or { jobs: [...] }
       const list = Array.isArray(res) ? res : (Array.isArray(res?.jobs) ? res.jobs : [])
       allJobs.value = [...list]
       applyFilter(currentFilter.value)
     } catch (err) {
-      if (err?.name === 'AbortError') return
+      // $fetch wraps AbortError in a FetchError — check both the error itself and its cause
+      if (err?.name === 'AbortError' || err?.cause?.name === 'AbortError') return
       const status = err?.status || err?.response?.status
       const msg =
         err?.data?.statusMessage ||

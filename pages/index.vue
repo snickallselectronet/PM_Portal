@@ -19,6 +19,127 @@
         </div>
       </div>
 
+      <!-- Work Order Lookup -->
+      <div class="mb-6 bg-white rounded-lg shadow-sm p-4 border border-gray-200">
+        <h2 class="text-lg font-semibold text-gray-900 mb-1">Work Order Lookup</h2>
+        <p class="text-sm text-gray-500 mb-3">Enter a single work order number or paste multiple — from Excel or plain text, separated by commas, spaces, or new lines.</p>
+
+        <textarea
+          v-model="bulkInput"
+          rows="4"
+          placeholder="e.g. WO-1234&#10;WO-5678, WO-9012"
+          class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg font-mono focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-y"
+        />
+
+        <div class="mt-3 flex flex-wrap gap-3 items-center">
+          <button
+            @click="runBulkLookup"
+            :disabled="!bulkInput.trim() || bulkLookupLoading"
+            class="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {{ bulkLookupLoading ? 'Looking up…' : 'Look Up' }}
+          </button>
+
+          <button
+            v-if="bulkFound.length > 0 && bulkFound.some(j => j.PROGRESS !== 'INPRG')"
+            @click="bulkSetInProgress"
+            :disabled="bulkUpdating"
+            class="px-4 py-2 bg-amber-500 text-white text-sm font-medium rounded-lg hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {{ bulkUpdating
+              ? `Updating… (${bulkUpdateProgress}/${bulkFound.filter(j => j.PROGRESS !== 'INPRG').length})`
+              : bulkFound.filter(j => j.PROGRESS !== 'INPRG').length === 1
+                ? 'Set to In Progress'
+                : `Set All to In Progress (${bulkFound.filter(j => j.PROGRESS !== 'INPRG').length})`
+            }}
+          </button>
+
+          <button
+            v-if="bulkFound.length > 0 || bulkNotFound.length > 0"
+            @click="clearBulkLookup"
+            class="px-4 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition-colors"
+          >
+            Clear
+          </button>
+        </div>
+
+        <!-- Bulk update feedback -->
+        <div v-if="bulkUpdateError" class="mt-3 p-2 bg-red-50 border border-red-200 rounded text-sm text-red-700">
+          {{ bulkUpdateError }}
+        </div>
+        <div v-if="bulkUpdateSuccess" class="mt-3 p-2 bg-green-50 border border-green-200 rounded text-sm text-green-700">
+          {{ bulkUpdateSuccess }}
+        </div>
+
+        <!-- Results -->
+        <div v-if="bulkFound.length > 0 || bulkNotFound.length > 0" class="mt-4 space-y-4">
+
+          <!-- Found -->
+          <div v-if="bulkFound.length > 0">
+            <h3 class="text-sm font-semibold text-gray-700 mb-2">
+              ✅ {{ bulkFound.length === 1 ? 'Found' : `Found (${bulkFound.length})` }}
+            </h3>
+            <div class="overflow-x-auto rounded-lg border border-gray-200">
+              <table class="min-w-full text-sm divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                  <tr>
+                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">WONUM</th>
+                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Source</th>
+                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Progress</th>
+                  </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-100">
+                  <tr v-for="job in bulkFound" :key="`bulk-${job.source}-${job.OBJECTID}`" class="hover:bg-gray-50">
+                    <td class="px-4 py-2 font-mono font-medium text-gray-900">{{ job.WONUM }}</td>
+                    <td class="px-4 py-2">
+                      <span
+                        class="px-2 py-0.5 text-xs font-bold rounded-full"
+                        :class="job.source === 'WO_POLE'
+                          ? 'bg-blue-100 text-blue-800'
+                          : 'bg-green-100 text-green-800'"
+                      >
+                        {{ job.source === 'WO_POLE' ? 'WO_POLE' : 'Aurora' }}
+                      </span>
+                    </td>
+                    <td class="px-4 py-2 text-gray-600 max-w-xs truncate">{{ job.JOB_DESCRIPTION || '—' }}</td>
+                    <td class="px-4 py-2">
+                      <span
+                        class="px-2 py-0.5 text-xs font-semibold rounded-full"
+                        :class="job.PROGRESS === 'INPRG'
+                          ? 'bg-amber-100 text-amber-800'
+                          : job.PROGRESS === 'COMP'
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-gray-100 text-gray-600'"
+                      >
+                        {{ job.PROGRESS || '—' }}
+                      </span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Not Found -->
+          <div v-if="bulkNotFound.length > 0">
+            <h3 class="text-sm font-semibold text-red-700 mb-2">
+              ❌ {{ bulkNotFound.length === 1 ? 'Not Found' : `Not Found (${bulkNotFound.length})` }}
+            </h3>
+            <div class="flex flex-wrap gap-2">
+              <span
+                v-for="wonum in bulkNotFound"
+                :key="wonum"
+                class="px-3 py-1 bg-red-50 border border-red-300 text-red-700 text-xs font-mono rounded-full"
+              >
+                {{ wonum }}
+              </span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
       <!-- Search -->
       <SearchBar @search="handleSearch" />
 
@@ -98,6 +219,8 @@
 </template>
 
 <script setup>
+const { public: pub } = useRuntimeConfig()
+
 // Data/composable
 const { jobs, allJobs, loading, error, searchJobs, filterJobs, updateJob } = useJobs()
 
@@ -106,8 +229,111 @@ const activeFilter = ref('all')
 
 // Debug
 const buildTime = ref('')
-  
-// Debounce search so we don't hammer the function while typing
+
+// ── Work order lookup state ────────────────────────────────────────
+const bulkInput = ref('')
+const bulkFound = ref([])
+const bulkNotFound = ref([])
+const bulkLookupLoading = ref(false)
+const bulkUpdating = ref(false)
+const bulkUpdateProgress = ref(0)
+const bulkUpdateError = ref('')
+const bulkUpdateSuccess = ref('')
+
+/**
+ * Parse the textarea into a clean deduplicated list of WO numbers.
+ * Handles: newlines, tabs (Excel paste), commas, semicolons, spaces.
+ */
+function parseBulkInput(raw) {
+  return [...new Set(
+    raw
+      .split(/[\n\r\t,;]+/)
+      .flatMap(s => s.split(/\s+/))
+      .map(s => s.trim().toUpperCase())
+      .filter(Boolean)
+  )]
+}
+
+async function runBulkLookup() {
+  bulkFound.value = []
+  bulkNotFound.value = []
+  bulkUpdateError.value = ''
+  bulkUpdateSuccess.value = ''
+  bulkLookupLoading.value = true
+
+  const requested = parseBulkInput(bulkInput.value)
+
+  // Ensure allJobs is populated — trigger a full load if empty
+  if (!Array.isArray(allJobs.value) || allJobs.value.length === 0) {
+    await searchJobs('')
+  }
+
+  const jobMap = new Map(
+    (allJobs.value || []).map(j => [String(j.WONUM || '').toUpperCase(), j])
+  )
+
+  const found = []
+  const notFound = []
+
+  for (const wonum of requested) {
+    if (jobMap.has(wonum)) {
+      found.push(jobMap.get(wonum))
+    } else {
+      notFound.push(wonum)
+    }
+  }
+
+  bulkFound.value = found
+  bulkNotFound.value = notFound
+  bulkLookupLoading.value = false
+}
+
+async function bulkSetInProgress() {
+  bulkUpdateError.value = ''
+  bulkUpdateSuccess.value = ''
+  bulkUpdating.value = true
+  bulkUpdateProgress.value = 0
+
+  const toUpdate = bulkFound.value.filter(j => j.PROGRESS !== 'INPRG')
+  let successCount = 0
+  const failed = []
+
+  for (const job of toUpdate) {
+    try {
+      await $fetch(`${pub.apiBase}/jobs/${job.OBJECTID}`, {
+        method: 'PATCH',
+        body: { progress: 'INPRG', source: job.source }
+      })
+      job.PROGRESS = 'INPRG'
+      updateJob({ ...job, PROGRESS: 'INPRG' })
+      successCount++
+    } catch (err) {
+      failed.push(job.WONUM)
+    }
+    bulkUpdateProgress.value++
+  }
+
+  bulkUpdating.value = false
+
+  if (failed.length === 0) {
+    bulkUpdateSuccess.value = successCount === 1
+      ? '✅ Successfully set 1 job to In Progress.'
+      : `✅ Successfully set ${successCount} jobs to In Progress.`
+  } else {
+    bulkUpdateError.value = `⚠️ ${successCount} updated. Failed to update: ${failed.join(', ')}`
+  }
+}
+
+function clearBulkLookup() {
+  bulkInput.value = ''
+  bulkFound.value = []
+  bulkNotFound.value = []
+  bulkUpdateError.value = ''
+  bulkUpdateSuccess.value = ''
+  bulkUpdateProgress.value = 0
+}
+
+// ── Search ─────────────────────────────────────────────────────────
 let searchTimer = null
 const debouncedSearch = (term) => {
   clearTimeout(searchTimer)
@@ -116,7 +342,6 @@ const debouncedSearch = (term) => {
   }, 300)
 }
 
-// Initial load (client-only to avoid SSR calling external services)
 onMounted(() => {
   buildTime.value = new Date().toISOString()
   searchJobs()
