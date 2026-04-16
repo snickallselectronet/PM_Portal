@@ -1,10 +1,28 @@
+// middleware/auth.global.js
 export default defineNuxtRouteMiddleware(async (to) => {
-  // Public page
   if (to.path === '/login') return
 
-  try {
-    await $fetch('/api/auth/me', { credentials: 'include' })
-  } catch {
-    return navigateTo('/login')
+  // Skip middleware on server side — session lives in browser localStorage
+  if (import.meta.server) return
+
+  const supabase = useSupabase()
+  const { role, loadSession } = useAuth()
+
+  // Get session from Supabase (reads from localStorage in browser)
+  const { data: { session } } = await supabase.auth.getSession()
+
+  if (!session) {
+    return navigateTo(`/login?redirect=${encodeURIComponent(to.fullPath)}`)
+  }
+
+  // Load role if not in state yet
+  if (!role.value) {
+    await loadSession()
+  }
+
+  // Admin-only pages
+  const adminRoutes = ['/config', '/logs']
+  if (adminRoutes.includes(to.path) && role.value !== 'ADMIN') {
+    return navigateTo('/')
   }
 })

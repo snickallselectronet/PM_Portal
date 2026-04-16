@@ -2,30 +2,35 @@
 <template>
   <div class="min-h-screen bg-gray-50">
     <div class="container mx-auto px-4 py-8">
-      <!-- Header (centered) -->
+
       <header class="mb-8 text-center">
-        <h1 class="text-3xl font-bold text-gray-900 mb-2">Sign In</h1>
-        <p class="text-gray-600">Access the PM Job Search portal</p>
+        <div class="flex items-center justify-center gap-2 mb-4">
+          <div class="w-2 h-2 rounded-full bg-green-500"></div>
+          <span class="text-xs font-medium text-gray-500 tracking-widest uppercase">ElectroNet</span>
+        </div>
+        <h1 class="text-3xl font-bold text-gray-900 mb-2">PM Portal</h1>
+        <p class="text-gray-600">Field work management — sign in to continue</p>
       </header>
 
       <div class="max-w-md mx-auto">
-        <!-- Error -->
+
         <div v-if="error" class="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-          <p class="text-red-800">{{ error }}</p>
+          <p class="text-red-800 text-sm">{{ error }}</p>
         </div>
 
-        <!-- Card -->
         <div class="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
-          <form @submit.prevent="submit" class="space-y-5">
+          <div class="space-y-5">
+
             <div>
-              <label for="username" class="block text-sm font-medium text-gray-700">Username</label>
+              <label for="email" class="block text-sm font-medium text-gray-700">Email</label>
               <input
-                id="username"
-                v-model="username"
-                type="text"
-                autocomplete="username"
-                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="admin"
+                id="email"
+                v-model="email"
+                type="email"
+                autocomplete="email"
+                @keydown.enter="submit"
+                class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                placeholder="you@electronet.co.nz"
               />
             </div>
 
@@ -37,85 +42,77 @@
                   id="password"
                   v-model="password"
                   autocomplete="current-password"
-                  class="block w-full rounded-md border-gray-300 shadow-sm pr-10 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  @keydown.enter="submit"
+                  class="block w-full rounded-md border border-gray-300 px-3 py-2 pr-16 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                   placeholder="••••••••"
                 />
                 <button
                   type="button"
                   @click="show = !show"
-                  class="absolute inset-y-0 right-0 px-3 text-gray-500 hover:text-gray-700 focus:outline-none"
-                  aria-label="Toggle password visibility"
+                  class="absolute inset-y-0 right-0 px-3 text-gray-500 hover:text-gray-700 text-sm focus:outline-none"
                 >
-                  <span v-if="show">Hide</span>
-                  <span v-else>Show</span>
+                  {{ show ? 'Hide' : 'Show' }}
                 </button>
               </div>
             </div>
 
             <button
-              type="submit"
-              :disabled="loading"
-              class="w-full inline-flex items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-white font-medium hover:bg-blue-700 disabled:opacity-50"
+              @click="submit"
+              :disabled="loading || !email || !password"
+              class="w-full inline-flex items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-white text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              <svg
-                v-if="loading"
-                class="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none" viewBox="0 0 24 24"
-              >
+              <svg v-if="loading"
+                class="animate-spin -ml-1 mr-3 h-4 w-4 text-white"
+                xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-                <path class="opacity-75" fill="currentColor"
-                      d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/>
               </svg>
               {{ loading ? 'Signing in…' : 'Sign in' }}
             </button>
-          </form>
 
-          <!-- Optional: dev prefill button only -->
-          <div v-if="demoPrefill" class="mt-6 text-right">
-            <button @click="prefill" class="text-blue-600 hover:text-blue-800 hover:underline text-sm">
-              Prefill from .env
-            </button>
           </div>
         </div>
 
-        <p class="text-xs text-gray-500 mt-4 text-center">
-          Your session is stored in a secure, HTTP-only cookie.
-        </p>
+        <p class="text-xs text-gray-400 mt-4 text-center">Internal use only — ElectroNet staff only</p>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-definePageMeta({})
+const supabase = useSupabase()
+const route    = useRoute()
 
-const username = ref('')
+const email    = ref('')
 const password = ref('')
-const show = ref(false)
-const loading = ref(false)
-const error = ref('')
+const show     = ref(false)
+const loading  = ref(false)
+const error    = ref('')
 
-const { public: pub } = useRuntimeConfig()
-const demoPrefill = Boolean(pub?.demoLoginPrefill)
-
-const prefill = () => {
-  username.value = pub?.demoUser || ''
-  password.value = pub?.demoPass || ''
-}
-
-const submit = async () => {
-  error.value = ''
+async function submit() {
+  if (!email.value || !password.value) return
+  error.value   = ''
   loading.value = true
+
   try {
-    await $fetch('/api/auth/login', {
-      method: 'POST',
-      body: { username: username.value.trim(), password: password.value },
-      credentials: 'include'
+    const { error: authError } = await supabase.auth.signInWithPassword({
+      email:    email.value.trim(),
+      password: password.value
     })
-    await navigateTo('/') // go home after successful login
+
+    if (authError) {
+      error.value = authError.message
+      return
+    }
+
+    // Load role into global auth state
+    const { loadSession } = useAuth()
+    await loadSession()
+
+    await navigateTo('/')
+
   } catch (e) {
-    error.value = e?.data?.statusMessage || e?.message || 'Login failed'
+    error.value = e?.message || 'Sign in failed'
   } finally {
     loading.value = false
   }
