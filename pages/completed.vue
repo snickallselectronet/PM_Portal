@@ -1,5 +1,6 @@
 <template>
   <div class="min-h-screen bg-gray-50">
+    <AppNav />
     <div class="container mx-auto px-4 py-8">
       <header class="mb-8 flex justify-between items-center">
         <div>

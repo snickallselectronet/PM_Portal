@@ -145,6 +145,88 @@
           </div>
         </NuxtLink>
 
+        <!-- Logs — admin only -->
+        <NuxtLink v-if="isAdmin"
+          to="/logs"
+          class="group relative bg-white rounded-xl border border-gray-200 p-8 hover:border-amber-300 hover:shadow-lg transition-all duration-200 overflow-hidden"
+        >
+          <div class="absolute top-0 left-0 right-0 h-1 bg-amber-500 rounded-t-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
+
+          <div class="flex items-start justify-between mb-6">
+            <div class="p-3 bg-amber-50 rounded-lg border border-amber-100">
+              <svg class="h-5 w-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+              </svg>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-medium text-gray-500 bg-gray-100 border border-gray-200 px-2 py-0.5 rounded">Admin</span>
+              <svg class="h-4 w-4 text-gray-300 group-hover:text-amber-400 group-hover:translate-x-0.5 transition-all duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+              </svg>
+            </div>
+          </div>
+
+          <div class="mb-2 flex items-baseline gap-3">
+            <h2 class="text-xl font-bold text-gray-900">Incoming WO Logs</h2>
+          </div>
+          <p class="text-sm text-gray-500 mb-6 leading-relaxed">
+            Monitor API activity, track processing results and investigate errors from all work order ingest sources.
+          </p>
+
+          <div class="pt-5 border-t border-gray-100 grid grid-cols-2 gap-y-2">
+            <div class="flex items-center gap-2 text-xs text-gray-500">
+              <div class="w-1 h-1 rounded-full bg-amber-400"></div>
+              Success &amp; error tracking
+            </div>
+            <div class="flex items-center gap-2 text-xs text-gray-500">
+              <div class="w-1 h-1 rounded-full bg-amber-400"></div>
+              Per source filtering
+            </div>
+          </div>
+        </NuxtLink>
+
+        <!-- Field Data Processing — admin only -->
+        <NuxtLink v-if="isAdmin"
+          to="/fieldlogs"
+          class="group relative bg-white rounded-xl border border-gray-200 p-8 hover:border-orange-300 hover:shadow-lg transition-all duration-200 overflow-hidden"
+        >
+          <div class="absolute top-0 left-0 right-0 h-1 bg-orange-500 rounded-t-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
+
+          <div class="flex items-start justify-between mb-6">
+            <div class="p-3 bg-orange-50 rounded-lg border border-orange-100">
+              <svg class="h-5 w-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+              </svg>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-medium text-gray-500 bg-gray-100 border border-gray-200 px-2 py-0.5 rounded">Admin</span>
+              <svg class="h-4 w-4 text-gray-300 group-hover:text-orange-400 group-hover:translate-x-0.5 transition-all duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+              </svg>
+            </div>
+          </div>
+
+          <div class="mb-2 flex items-baseline gap-3">
+            <h2 class="text-xl font-bold text-gray-900">Field Data Processing</h2>
+          </div>
+          <p class="text-sm text-gray-500 mb-6 leading-relaxed">
+            Test the field data processing pipeline against raw Survey123 JSON. View step-by-step run logs, inspect output, and manage attribute exclusion rules.
+          </p>
+
+          <div class="pt-5 border-t border-gray-100 grid grid-cols-2 gap-y-2">
+            <div class="flex items-center gap-2 text-xs text-gray-500">
+              <div class="w-1 h-1 rounded-full bg-orange-400"></div>
+              Pipeline debugger
+            </div>
+            <div class="flex items-center gap-2 text-xs text-gray-500">
+              <div class="w-1 h-1 rounded-full bg-orange-400"></div>
+              Exclusions config
+            </div>
+          </div>
+        </NuxtLink>
+
         <!-- Config — admin only -->
         <NuxtLink v-if="isAdmin"
           to="/config"
@@ -186,89 +268,6 @@
             </div>
           </div>
         </NuxtLink>
-
-        <!-- Logs — admin only -->
-        <NuxtLink v-if="isAdmin"
-          to="/logs"
-          class="group relative bg-white rounded-xl border border-gray-200 p-8 hover:border-amber-300 hover:shadow-lg transition-all duration-200 overflow-hidden"
-        >
-          <div class="absolute top-0 left-0 right-0 h-1 bg-amber-500 rounded-t-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
-
-          <div class="flex items-start justify-between mb-6">
-            <div class="p-3 bg-amber-50 rounded-lg border border-amber-100">
-              <svg class="h-5 w-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-              </svg>
-            </div>
-            <div class="flex items-center gap-2">
-              <span class="text-xs font-medium text-gray-500 bg-gray-100 border border-gray-200 px-2 py-0.5 rounded">Admin</span>
-              <svg class="h-4 w-4 text-gray-300 group-hover:text-amber-400 group-hover:translate-x-0.5 transition-all duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-              </svg>
-            </div>
-          </div>
-
-          <div class="mb-2 flex items-baseline gap-3">
-            <h2 class="text-xl font-bold text-gray-900">Ingest Logs</h2>
-          </div>
-          <p class="text-sm text-gray-500 mb-6 leading-relaxed">
-            Monitor API activity, track processing results and investigate errors from all work order ingest sources.
-          </p>
-
-          <div class="pt-5 border-t border-gray-100 grid grid-cols-2 gap-y-2">
-            <div class="flex items-center gap-2 text-xs text-gray-500">
-              <div class="w-1 h-1 rounded-full bg-amber-400"></div>
-              Success &amp; error tracking
-            </div>
-            <div class="flex items-center gap-2 text-xs text-gray-500">
-              <div class="w-1 h-1 rounded-full bg-amber-400"></div>
-              Per source filtering
-            </div>
-          </div>
-        </NuxtLink>
-
-        <!-- Field Processing — admin only -->
-        <NuxtLink v-if="isAdmin"
-          to="/fieldlogs"
-          class="group relative bg-white rounded-xl border border-gray-200 p-8 hover:border-orange-300 hover:shadow-lg transition-all duration-200 overflow-hidden"
-        >
-          <div class="absolute top-0 left-0 right-0 h-1 bg-orange-500 rounded-t-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
-
-          <div class="flex items-start justify-between mb-6">
-            <div class="p-3 bg-orange-50 rounded-lg border border-orange-100">
-              <svg class="h-5 w-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-              </svg>
-            </div>
-            <div class="flex items-center gap-2">
-              <span class="text-xs font-medium text-gray-500 bg-gray-100 border border-gray-200 px-2 py-0.5 rounded">Admin</span>
-              <svg class="h-4 w-4 text-gray-300 group-hover:text-orange-400 group-hover:translate-x-0.5 transition-all duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-              </svg>
-            </div>
-          </div>
-
-          <div class="mb-2 flex items-baseline gap-3">
-            <h2 class="text-xl font-bold text-gray-900">Field Processing</h2>
-          </div>
-          <p class="text-sm text-gray-500 mb-6 leading-relaxed">
-            Test the field data processing pipeline against raw Survey123 JSON. View step-by-step run logs, inspect output, and manage attribute exclusion rules.
-          </p>
-
-          <div class="pt-5 border-t border-gray-100 grid grid-cols-2 gap-y-2">
-            <div class="flex items-center gap-2 text-xs text-gray-500">
-              <div class="w-1 h-1 rounded-full bg-orange-400"></div>
-              Pipeline debugger
-            </div>
-            <div class="flex items-center gap-2 text-xs text-gray-500">
-              <div class="w-1 h-1 rounded-full bg-orange-400"></div>
-              Exclusions config
-            </div>
-          </div>
-        </NuxtLink>
-
       </div>
     </div>
 

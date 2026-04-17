@@ -10,26 +10,26 @@
         <p v-if="wo._receivedAt" class="text-xs text-gray-400 mt-0.5">Received: {{ formatDate(wo._receivedAt) }}</p>
       </div>
       <div class="flex items-center gap-2">
-        <button
-          @click="openRawJson"
-          class="flex items-center gap-1 px-2 py-1 text-xs font-medium rounded text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition-colors border border-gray-200"
-        >
+        <button @click="showJson = true"
+          class="flex items-center gap-1 px-2 py-1 text-xs font-medium rounded text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition-colors border border-gray-200">
           <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
               d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/>
           </svg>
-          View Raw JSON
+          View JSON
         </button>
-        <span v-if="isEdited"
+        <span v-if="wo._isEdited"
           class="px-2 py-1 text-xs font-bold rounded-full bg-orange-100 text-orange-700 border border-orange-200">
           Edited
         </span>
-        <span
-          class="px-3 py-1 text-xs font-bold rounded-full"
+        <span v-if="wo._hasRevisions"
+          class="px-2 py-1 text-xs font-bold rounded-full bg-purple-100 text-purple-700 border border-purple-200">
+          Revised
+        </span>
+        <span class="px-3 py-1 text-xs font-bold rounded-full"
           :class="isReplacement
             ? 'bg-blue-100 text-blue-800 border border-blue-200'
-            : 'bg-amber-100 text-amber-800 border border-amber-200'"
-        >
+            : 'bg-amber-100 text-amber-800 border border-amber-200'">
           {{ isReplacement ? 'Replacement' : 'Maintenance' }}
         </span>
       </div>
@@ -37,18 +37,15 @@
 
     <div class="space-y-2">
 
-      <!-- Job Description -->
       <div v-if="wo.WorkDescription">
         <label class="text-sm font-medium text-gray-700">Job Description:</label>
         <p class="text-sm text-gray-900">{{ wo.WorkDescription }}</p>
       </div>
 
-      <!-- Main Asset Section -->
+      <!-- Main Asset -->
       <div class="mt-3 pt-3 border-t border-gray-200">
         <p class="text-sm font-semibold text-gray-700 mb-2">Main Asset Section</p>
         <div class="space-y-2">
-
-          <!-- Original sub-card -->
           <div class="rounded-md border border-gray-200 bg-gray-50 p-3 text-sm">
             <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
               {{ isReplacement ? 'Original' : 'Asset' }}
@@ -68,8 +65,6 @@
               </div>
             </div>
           </div>
-
-          <!-- Replacement sub-card -->
           <div v-if="isReplacement && wo.Replacement?.replacement_asset_num"
             class="rounded-md border border-green-200 bg-green-50 p-3 text-sm">
             <p class="text-xs font-semibold text-green-700 uppercase tracking-wide mb-2">Replacement</p>
@@ -88,11 +83,10 @@
               </div>
             </div>
           </div>
-
         </div>
       </div>
 
-      <!-- Key fields grid -->
+      <!-- Key fields -->
       <div class="grid grid-cols-2 gap-x-4 gap-y-2 mt-3 text-sm">
         <div v-if="wo.TargetFinishDate">
           <label class="font-medium text-gray-700">Target Finish:</label>
@@ -112,12 +106,10 @@
         </div>
       </div>
 
-      <!-- Multi-Asset Section -->
+      <!-- Multi-Asset -->
       <div v-if="wo.IsMultiAsset && wo.MultiAssets?.length > 0" class="mt-3 pt-3 border-t border-gray-200">
-        <button
-          @click="multiOpen = !multiOpen"
-          class="flex items-center justify-between w-full text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors"
-        >
+        <button @click="multiOpen = !multiOpen"
+          class="flex items-center justify-between w-full text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors">
           <span>Multi-Asset Section ({{ wo.MultiAssets.length }})</span>
           <svg class="h-4 w-4 transition-transform" :class="{ 'rotate-180': multiOpen }"
             fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -125,13 +117,9 @@
           </svg>
         </button>
         <div v-if="multiOpen" class="mt-2 space-y-3">
-          <div v-for="(ma, idx) in wo.MultiAssets" :key="idx"
-            class="rounded-md border border-gray-300 p-3 space-y-2">
+          <div v-for="(ma, idx) in wo.MultiAssets" :key="idx" class="rounded-md border border-gray-300 p-3 space-y-2">
             <p class="text-xs font-semibold text-gray-600 uppercase tracking-wide">Asset {{ idx + 1 }}</p>
             <div class="rounded-md border border-gray-200 bg-gray-50 p-3 text-sm">
-              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
-                {{ ma.replacement_asset_num ? 'Original' : 'Asset' }}
-              </p>
               <div class="grid grid-cols-2 gap-x-4 gap-y-1">
                 <div v-if="ma.original_tag">
                   <label class="font-medium text-gray-500 text-xs">Tag:</label>
@@ -147,8 +135,7 @@
                 </div>
               </div>
             </div>
-            <div v-if="ma.replacement_asset_num"
-              class="rounded-md border border-green-200 bg-green-50 p-3 text-sm">
+            <div v-if="ma.replacement_asset_num" class="rounded-md border border-green-200 bg-green-50 p-3 text-sm">
               <p class="text-xs font-semibold text-green-700 uppercase tracking-wide mb-2">Replacement</p>
               <div class="grid grid-cols-2 gap-x-4 gap-y-1">
                 <div class="col-span-2">
@@ -167,10 +154,8 @@
 
       <!-- Notes & FSP -->
       <div v-if="wo.LongDescription || wo.FSPNote" class="mt-3 pt-3 border-t border-gray-200">
-        <button
-          @click="notesOpen = !notesOpen"
-          class="flex items-center justify-between w-full text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors"
-        >
+        <button @click="notesOpen = !notesOpen"
+          class="flex items-center justify-between w-full text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors">
           <span>Notes &amp; FSP</span>
           <svg class="h-4 w-4 transition-transform" :class="{ 'rotate-180': notesOpen }"
             fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -191,10 +176,8 @@
 
       <!-- Documents -->
       <div v-if="wo.DocLinks?.length > 0" class="mt-3 pt-3 border-t border-gray-200">
-        <button
-          @click="docsOpen = !docsOpen"
-          class="flex items-center justify-between w-full text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors"
-        >
+        <button @click="docsOpen = !docsOpen"
+          class="flex items-center justify-between w-full text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors">
           <span>Documents ({{ wo.DocLinks.length }})</span>
           <svg class="h-4 w-4 transition-transform" :class="{ 'rotate-180': docsOpen }"
             fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -202,8 +185,7 @@
           </svg>
         </button>
         <div v-if="docsOpen" class="mt-2 space-y-1">
-          <a v-for="(doc, idx) in wo.DocLinks" :key="idx"
-            :href="doc.url" target="_blank" rel="noopener"
+          <a v-for="(doc, idx) in wo.DocLinks" :key="idx" :href="doc.url" target="_blank" rel="noopener"
             class="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 hover:underline">
             <svg class="h-3.5 w-3.5 flex-shrink-0 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -231,22 +213,34 @@
     </div>
   </div>
 
-  <!-- Viewer modal -->
-  <JsonViewer
-    v-model="showViewer"
-    :wo-num="String(wo.WONum)"
-    @edit="openEditor"
-    @saved="onSaved"
-  />
-
-  <!-- Editor modal -->
-  <JsonEditor
-    v-model="showEditor"
-    :wo-num="String(wo.WONum)"
-    :initial-json="editingJson"
-    :current-json="currentJson"
-    @saved="onSaved"
-  />
+  <!-- View-only JSON modal -->
+  <Teleport to="body">
+    <div v-if="showJson" class="fixed inset-0 z-50 flex items-center justify-center p-4" @click.self="showJson = false">
+      <div class="absolute inset-0 bg-black/50" @click="showJson = false"/>
+      <div class="relative bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[85vh] flex flex-col">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 shrink-0">
+          <h2 class="text-base font-semibold text-gray-900 font-mono">WO {{ wo.WONum }} — Raw JSON</h2>
+          <div class="flex items-center gap-2">
+            <button @click="copyJson"
+              class="px-3 py-1.5 text-xs font-medium bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors">
+              {{ copied ? 'Copied!' : 'Copy' }}
+            </button>
+            <button @click="showJson = false" class="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500">
+              <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div class="flex-1 overflow-auto bg-gray-950 p-4 rounded-b-xl">
+          <div v-if="jsonLoading" class="flex items-center justify-center py-16">
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-400"/>
+          </div>
+          <pre v-else class="text-xs font-mono text-gray-200 whitespace-pre-wrap">{{ rawJsonText }}</pre>
+        </div>
+      </div>
+    </div>
+  </Teleport>
 </template>
 
 <script setup>
@@ -254,33 +248,39 @@ const props = defineProps({
   wo: { type: Object, required: true }
 })
 
-const emit = defineEmits(['updated'])
+const { apiFetch } = useApi()
 
 const isReplacement = computed(() => props.wo.Replacement?.is_replacement)
-const isEdited      = computed(() => props.wo._isEdited)
 
 const multiOpen = ref(false)
 const notesOpen = ref(false)
 const docsOpen  = ref(false)
 
-// ── Modals ───────────────────────────────────────────────────────────
-const showViewer  = ref(false)
-const showEditor  = ref(false)
-const editingJson = ref(null)
-const currentJson = ref(null)
+// ── View-only JSON modal ───────────────────────────────────────────────────────
+const showJson    = ref(false)
+const jsonLoading = ref(false)
+const rawJsonText = ref('')
+const copied      = ref(false)
 
-function openRawJson() {
-  showViewer.value = true
-}
+watch(showJson, async (open) => {
+  if (!open) return
+  if (rawJsonText.value) return // already loaded
+  jsonLoading.value = true
+  try {
+    const res = await apiFetch(`/api/workorders/${props.wo.WONum}/data`)
+    rawJsonText.value = JSON.stringify(res.raw_data, null, 2)
+  } catch {
+    rawJsonText.value = 'Failed to load raw JSON.'
+  } finally {
+    jsonLoading.value = false
+  }
+})
 
-function openEditor({ selected, current }) {
-  editingJson.value = selected
-  currentJson.value = current
-  showEditor.value  = true
-}
-
-function onSaved(newProcessedData) {
-  emit('updated', { woNum: props.wo.WONum, newData: { ...newProcessedData, _isEdited: true } })
+async function copyJson() {
+  if (!rawJsonText.value) return
+  await navigator.clipboard.writeText(rawJsonText.value)
+  copied.value = true
+  setTimeout(() => { copied.value = false }, 2000)
 }
 
 function formatDate(iso) {

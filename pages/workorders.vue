@@ -1,6 +1,7 @@
 <!-- pages/workorders.vue -->
 <template>
   <div class="min-h-screen bg-gray-50">
+    <AppNav />
     <div class="container mx-auto px-4 py-8">
 
       <!-- Header -->
@@ -198,7 +199,6 @@
             v-for="wo in displayedJobs"
             :key="wo.WONum"
             :wo="wo"
-            @updated="onCardUpdated"
           />
         </div>
       </div>
@@ -364,15 +364,6 @@ function searchableText(wo) {
     wo.Location?.gxp, wo.Location?.network,
     ...(wo.MultiAssets?.flatMap(m => [m.original_asset_num, m.original_tag, m.replacement_asset_num]) || [])
   ].filter(Boolean).join(' ').toLowerCase()
-}
-
-// ── Card update handler ─────────────────────────────────────────────
-function onCardUpdated({ woNum, newData }) {
-  const idx = allData.value.findIndex(w => String(w.WONum) === String(woNum))
-  if (idx !== -1) {
-    allData.value[idx] = { ...allData.value[idx], ...newData }
-    applyFilters()
-  }
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────

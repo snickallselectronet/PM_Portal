@@ -1,4 +1,7 @@
 // server/api/workorders/[wo_num]/save.post.js
+// Saves edited raw_data, reprocesses to processed_data, saves revision,
+// sets status = QUEUED ready for ArcGIS resend pipeline.
+
 export default defineEventHandler(async (event) => {
   const user  = await requireAuth(event)
   const cfg   = useRuntimeConfig()
@@ -20,6 +23,7 @@ export default defineEventHandler(async (event) => {
     'Accept':        'application/json',
   }
 
+  // Fetch current raw_data to store as previous value
   const currentRes = await fetch(
     `${cfg.supabaseUrl}/rest/v1/work_orders?select=raw_data&wo_num=eq.${encodeURIComponent(woNum)}&limit=1`,
     { headers }
@@ -29,10 +33,11 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 404, statusMessage: `Work order ${woNum} not found` })
   }
 
-  const previousRaw = currentRows[0].raw_data
-  const now         = new Date().toISOString()
+  const previousRaw  = currentRows[0].raw_data
+  const now          = new Date().toISOString()
   const newProcessed = processWorkOrder(newRaw)
 
+  // Save revision + update work order in parallel
   const [, updateRes] = await Promise.all([
     fetch(`${cfg.supabaseUrl}/rest/v1/work_order_revisions`, {
       method: 'POST',
@@ -54,6 +59,7 @@ export default defineEventHandler(async (event) => {
         raw_data:       newRaw,
         processed_data: newProcessed,
         is_edited:      true,
+        status:         'QUEUED',   // Mark for ArcGIS resend
         updated_at:     now,
       })
     })

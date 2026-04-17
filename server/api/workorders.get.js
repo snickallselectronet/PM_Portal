@@ -7,12 +7,11 @@ export default defineEventHandler(async (event) => {
     'apikey':        cfg.supabaseSecretKey,
     'Authorization': `Bearer ${cfg.supabaseSecretKey}`,
     'Accept':        'application/json',
-    // Only fetch processed_data + the two key columns — skip raw_data and arcgis_payload
-    'Prefer':        'return=representation'
   }
 
+  // Fetch work orders with embedded revision count via PostgREST resource embedding
   const url = `${cfg.supabaseUrl}/rest/v1/work_orders`
-    + `?select=wo_num,parent_wo_num,status,is_edited,created_at,received_at,updated_at,processed_data`
+    + `?select=wo_num,parent_wo_num,status,is_edited,created_at,received_at,updated_at,processed_data,work_order_revisions(id)`
     + `&order=wo_num.asc`
     + `&limit=2000`
 
@@ -24,18 +23,18 @@ export default defineEventHandler(async (event) => {
 
   const rows = await res.json()
 
-  // Flatten: spread processed_data so WorkOrderCard gets the same shape as before
   const data = rows
-    .filter(row => row.processed_data)   // skip any rows without processed_data
+    .filter(row => row.processed_data)
     .map(row => ({
       ...(row.processed_data ?? {}),
-      WONum:        row.wo_num,
-      ParentWONum:  row.parent_wo_num,
-      _status:      row.status,
-      _isEdited:    row.is_edited,
-      _createdAt:   row.created_at,
-      _receivedAt:  row.received_at,
-      _updatedAt:   row.updated_at,
+      WONum:          row.wo_num,
+      ParentWONum:    row.parent_wo_num,
+      _status:        row.status,
+      _isEdited:      row.is_edited,
+      _hasRevisions:  (row.work_order_revisions?.length ?? 0) > 0,
+      _createdAt:     row.created_at,
+      _receivedAt:    row.received_at,
+      _updatedAt:     row.updated_at,
     }))
 
   return {
