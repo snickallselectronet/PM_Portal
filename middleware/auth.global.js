@@ -21,7 +21,7 @@ export default defineNuxtRouteMiddleware(async (to) => {
   }
 
   // Admin-only pages
-  const adminRoutes = ['/config', '/logs']
+  const adminRoutes = ['/config', '/logs', '/fieldlogs']
   if (adminRoutes.includes(to.path) && role.value !== 'ADMIN') {
     return navigateTo('/')
   }

@@ -29,6 +29,51 @@ CREATE TABLE public.asset_mapping_revisions (
   CONSTRAINT asset_mapping_revisions_pkey PRIMARY KEY (id),
   CONSTRAINT asset_mapping_revisions_asset_mapping_id_fkey FOREIGN KEY (asset_mapping_id) REFERENCES public.asset_mapping(id)
 );
+CREATE TABLE public.field_processing_exclusions (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  attribute text NOT NULL UNIQUE,
+  note text,
+  is_active boolean NOT NULL DEFAULT true,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT field_processing_exclusions_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.field_processing_revisions (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  run_id uuid NOT NULL,
+  previous_output json NOT NULL,
+  new_output json NOT NULL,
+  changed_by text NOT NULL,
+  changed_at timestamp with time zone NOT NULL DEFAULT now(),
+  note text,
+  CONSTRAINT field_processing_revisions_pkey PRIMARY KEY (id),
+  CONSTRAINT field_processing_revisions_run_id_fkey FOREIGN KEY (run_id) REFERENCES public.field_processing_runs(id)
+);
+CREATE TABLE public.field_processing_runs (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  wo_num text,
+  survey123_input json NOT NULL,
+  processed_output json,
+  run_logs json,
+  status text NOT NULL DEFAULT 'RECEIVED'::text CHECK (status = ANY (ARRAY['RECEIVED'::text, 'PROCESSED'::text, 'SENT'::text, 'ERROR'::text])),
+  error_message text,
+  pa_response json,
+  sent_at timestamp with time zone,
+  received_at timestamp with time zone NOT NULL DEFAULT now(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT field_processing_runs_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.ingest_log (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  logged_at timestamp with time zone NOT NULL DEFAULT now(),
+  wo_num text,
+  source text,
+  status text CHECK (status = ANY (ARRAY['success'::text, 'error'::text, 'skipped'::text])),
+  message text,
+  detail jsonb,
+  CONSTRAINT ingest_log_pkey PRIMARY KEY (id)
+);
 CREATE TABLE public.published_forms (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   form_name text NOT NULL UNIQUE,
@@ -45,18 +90,12 @@ CREATE TABLE public.user_profiles (
   CONSTRAINT user_profiles_pkey PRIMARY KEY (id),
   CONSTRAINT user_profiles_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id)
 );
-CREATE TABLE public.work_order_cache (
-  id integer NOT NULL DEFAULT 1 CHECK (id = 1),
-  data jsonb NOT NULL,
-  updated_at timestamp with time zone NOT NULL DEFAULT now(),
-  CONSTRAINT work_order_cache_pkey PRIMARY KEY (id)
-);
 CREATE TABLE public.work_order_revisions (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   wo_num text NOT NULL,
-  field text NOT NULL CHECK (field = ANY (ARRAY['processed_data'::text, 'arcgis_payload'::text])),
-  previous_value jsonb NOT NULL,
-  new_value jsonb NOT NULL,
+  field text NOT NULL CHECK (field = ANY (ARRAY['raw_data'::text, 'processed_data'::text, 'arcgis_payload'::text])),
+  previous_value json NOT NULL,
+  new_value json NOT NULL,
   changed_by text NOT NULL,
   changed_at timestamp with time zone NOT NULL DEFAULT now(),
   note text,
@@ -66,7 +105,7 @@ CREATE TABLE public.work_order_revisions (
 CREATE TABLE public.work_orders (
   wo_num text NOT NULL,
   parent_wo_num text,
-  raw_data jsonb NOT NULL,
+  raw_data json NOT NULL,
   processed_data jsonb,
   arcgis_payload jsonb,
   status text NOT NULL DEFAULT 'RECEIVED'::text CHECK (status = ANY (ARRAY['RECEIVED'::text, 'QUEUED'::text, 'SENT'::text, 'ERROR'::text, 'SKIPPED'::text])),
@@ -75,5 +114,7 @@ CREATE TABLE public.work_orders (
   error_message text,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  is_edited boolean NOT NULL DEFAULT false,
+  received_at timestamp with time zone,
   CONSTRAINT work_orders_pkey PRIMARY KEY (wo_num)
 );

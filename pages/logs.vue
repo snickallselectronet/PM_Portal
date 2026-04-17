@@ -22,7 +22,6 @@
       <!-- Filters -->
       <div class="mb-6 bg-white rounded-lg shadow-sm p-4 border border-gray-200">
         <div class="flex flex-wrap gap-4 items-center">
-          <!-- Status filter -->
           <div class="flex items-center gap-2">
             <label class="text-xs font-medium text-gray-500">Status:</label>
             <div class="flex gap-1">
@@ -37,7 +36,6 @@
             </div>
           </div>
 
-          <!-- Source filter -->
           <div class="flex items-center gap-2">
             <label class="text-xs font-medium text-gray-500">Source:</label>
             <select v-model="filterSource" @change="loadLogs"
@@ -46,11 +44,11 @@
               <option value="import_script">Import Script</option>
               <option value="c_sharp_relay">C# Relay</option>
               <option value="test_script">Test Script</option>
+              <option value="field_processing">Field Processing</option>
               <option value="unknown">Unknown</option>
             </select>
           </div>
 
-          <!-- WO num filter -->
           <div class="flex items-center gap-2">
             <label class="text-xs font-medium text-gray-500">WO:</label>
             <input v-model="filterWoNum" @keydown.enter="loadLogs" type="text"
@@ -58,7 +56,6 @@
               class="text-xs border border-gray-300 rounded-lg px-2 py-1.5 w-24 focus:ring-2 focus:ring-blue-500"/>
           </div>
 
-          <!-- Stats -->
           <div class="ml-auto flex gap-4 text-xs text-gray-500">
             <span>{{ logs.length }} entries</span>
             <span class="text-green-600 font-medium">{{ successCount }} success</span>
@@ -67,23 +64,16 @@
         </div>
       </div>
 
-      <!-- Loading -->
       <div v-if="loading" class="text-center py-12">
         <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"/>
         <p class="mt-2 text-gray-600">Loading logs…</p>
       </div>
-
-      <!-- Error -->
       <div v-else-if="error" class="bg-red-50 border border-red-200 rounded-lg p-4">
         <p class="text-red-800">{{ error }}</p>
       </div>
-
-      <!-- Empty -->
       <div v-else-if="logs.length === 0" class="text-center py-12 text-gray-500">
         No log entries found.
       </div>
-
-      <!-- Log table -->
       <div v-else class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         <table class="min-w-full divide-y divide-gray-200 text-sm">
           <thead class="bg-gray-50">
@@ -99,15 +89,10 @@
           <tbody class="divide-y divide-gray-100">
             <tr v-for="log in logs" :key="log.id"
               :class="log.status === 'error' ? 'bg-red-50' : 'hover:bg-gray-50'">
-              <td class="px-4 py-3 text-xs text-gray-500 whitespace-nowrap font-mono">
-                {{ formatDate(log.logged_at) }}
-              </td>
-              <td class="px-4 py-3 font-mono text-xs font-medium text-gray-900">
-                {{ log.wo_num || '—' }}
-              </td>
+              <td class="px-4 py-3 text-xs text-gray-500 whitespace-nowrap font-mono">{{ formatDate(log.logged_at) }}</td>
+              <td class="px-4 py-3 font-mono text-xs font-medium text-gray-900">{{ log.wo_num || '—' }}</td>
               <td class="px-4 py-3">
-                <span class="px-2 py-0.5 text-xs rounded-full font-medium"
-                  :class="sourceClass(log.source)">
+                <span class="px-2 py-0.5 text-xs rounded-full font-medium" :class="sourceClass(log.source)">
                   {{ log.source || '—' }}
                 </span>
               </td>
@@ -121,14 +106,10 @@
                   {{ log.status }}
                 </span>
               </td>
-              <td class="px-4 py-3 text-xs text-gray-700 max-w-sm truncate">
-                {{ log.message }}
-              </td>
+              <td class="px-4 py-3 text-xs text-gray-700 max-w-sm truncate">{{ log.message }}</td>
               <td class="px-4 py-3">
                 <button v-if="log.detail" @click="showDetail(log)"
-                  class="text-xs text-blue-600 hover:text-blue-800 hover:underline">
-                  View
-                </button>
+                  class="text-xs text-blue-600 hover:text-blue-800 hover:underline">View</button>
               </td>
             </tr>
           </tbody>
@@ -139,9 +120,7 @@
 
     <!-- Detail modal -->
     <Teleport to="body">
-      <div v-if="selectedLog"
-        class="fixed inset-0 z-50 flex items-center justify-center p-4"
-        @click.self="selectedLog = null">
+      <div v-if="selectedLog" class="fixed inset-0 z-50 flex items-center justify-center p-4" @click.self="selectedLog = null">
         <div class="absolute inset-0 bg-black/50" @click="selectedLog = null"/>
         <div class="relative bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col">
           <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200">
@@ -149,8 +128,7 @@
               <h2 class="text-base font-semibold text-gray-900">Log Detail</h2>
               <p class="text-xs text-gray-500 mt-0.5">{{ formatDate(selectedLog.logged_at) }} — WO {{ selectedLog.wo_num || '—' }}</p>
             </div>
-            <button @click="selectedLog = null"
-              class="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors">
+            <button @click="selectedLog = null" class="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500">
               <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
               </svg>
@@ -172,7 +150,6 @@ const logs        = ref([])
 const loading     = ref(false)
 const error       = ref('')
 const selectedLog = ref(null)
-
 const filterStatus = ref('')
 const filterSource = ref('')
 const filterWoNum  = ref('')
@@ -203,9 +180,7 @@ async function loadLogs() {
   }
 }
 
-function showDetail(log) {
-  selectedLog.value = log
-}
+function showDetail(log) { selectedLog.value = log }
 
 function formatDate(iso) {
   if (!iso) return '—'
@@ -214,9 +189,10 @@ function formatDate(iso) {
 
 function sourceClass(source) {
   const map = {
-    import_script:  'bg-purple-100 text-purple-700',
-    c_sharp_relay:  'bg-blue-100 text-blue-700',
-    test_script:    'bg-yellow-100 text-yellow-700',
+    import_script:    'bg-purple-100 text-purple-700',
+    c_sharp_relay:    'bg-blue-100 text-blue-700',
+    test_script:      'bg-yellow-100 text-yellow-700',
+    field_processing: 'bg-orange-100 text-orange-700',
   }
   return map[source] || 'bg-gray-100 text-gray-600'
 }
