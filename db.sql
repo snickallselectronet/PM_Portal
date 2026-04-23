@@ -62,6 +62,7 @@ CREATE TABLE public.field_processing_runs (
   received_at timestamp with time zone NOT NULL DEFAULT now(),
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  attachments json,
   CONSTRAINT field_processing_runs_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.ingest_log (
@@ -99,8 +100,10 @@ CREATE TABLE public.work_order_revisions (
   changed_by text NOT NULL,
   changed_at timestamp with time zone NOT NULL DEFAULT now(),
   note text,
+  ingest_log_id uuid,
   CONSTRAINT work_order_revisions_pkey PRIMARY KEY (id),
-  CONSTRAINT work_order_revisions_wo_num_fkey FOREIGN KEY (wo_num) REFERENCES public.work_orders(wo_num)
+  CONSTRAINT work_order_revisions_wo_num_fkey FOREIGN KEY (wo_num) REFERENCES public.work_orders(wo_num),
+  CONSTRAINT work_order_revisions_ingest_log_id_fkey FOREIGN KEY (ingest_log_id) REFERENCES public.ingest_log(id)
 );
 CREATE TABLE public.work_orders (
   wo_num text NOT NULL,

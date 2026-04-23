@@ -1,4 +1,4 @@
-// server/api/admin/logs.get.js
+// server/api/logs.get.js
 export default defineEventHandler(async (event) => {
   await requireAuth(event, { role: 'ADMIN' })
   const cfg = useRuntimeConfig()
@@ -26,24 +26,28 @@ export default defineEventHandler(async (event) => {
   if (!res.ok) throw createError({ statusCode: 502, statusMessage: 'Failed to fetch logs' })
   const logs = await res.json()
 
-  // Get distinct WO nums that have revisions
-  const woNums = [...new Set(logs.map(l => l.wo_num).filter(Boolean))]
+  if (!logs.length) return logs
 
-  let revisedWoNums = new Set()
-  if (woNums.length) {
+  // Get the ingest_log ids for all log entries
+  const logIds = logs.map(l => l.id).filter(Boolean)
+
+  // Find which log ids have at least one revision against them
+  const revisedLogIds = new Set()
+  if (logIds.length) {
     const revUrl = `${cfg.supabaseUrl}/rest/v1/work_order_revisions`
-      + `?select=wo_num`
-      + `&wo_num=in.(${woNums.map(w => `"${w}"`).join(',')})`
+      + `?select=ingest_log_id`
+      + `&ingest_log_id=in.(${logIds.map(id => `"${id}"`).join(',')})`
     const revRes = await fetch(revUrl, { headers })
     if (revRes.ok) {
       const revRows = await revRes.json()
-      revisedWoNums = new Set(revRows.map(r => r.wo_num))
+      for (const r of revRows) {
+        if (r.ingest_log_id) revisedLogIds.add(r.ingest_log_id)
+      }
     }
   }
 
-  // Annotate logs with has_revisions flag
   return logs.map(log => ({
     ...log,
-    has_revisions: log.wo_num ? revisedWoNums.has(log.wo_num) : false,
+    has_revisions: revisedLogIds.has(log.id),
   }))
 })

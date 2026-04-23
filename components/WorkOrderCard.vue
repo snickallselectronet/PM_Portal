@@ -9,7 +9,7 @@
         <p class="text-sm text-gray-500">Parent: {{ wo.ParentWONum || '—' }}</p>
         <p v-if="wo._receivedAt" class="text-xs text-gray-400 mt-0.5">Received: {{ formatDate(wo._receivedAt) }}</p>
       </div>
-      <div class="flex items-center gap-2">
+      <div class="flex flex-wrap items-center justify-end gap-2">
         <button @click="showJson = true"
           class="flex items-center gap-1 px-2 py-1 text-xs font-medium rounded text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition-colors border border-gray-200">
           <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -26,6 +26,10 @@
           class="px-2 py-1 text-xs font-bold rounded-full bg-purple-100 text-purple-700 border border-purple-200">
           Revised
         </span>
+        <!-- Status badge -->
+        <span class="px-2 py-1 text-xs font-bold rounded-full" :class="statusClass">
+          {{ wo._status || 'RECEIVED' }}
+        </span>
         <span class="px-3 py-1 text-xs font-bold rounded-full"
           :class="isReplacement
             ? 'bg-blue-100 text-blue-800 border border-blue-200'
@@ -34,6 +38,8 @@
         </span>
       </div>
     </div>
+
+
 
     <div class="space-y-2">
 
@@ -241,22 +247,31 @@
       </div>
     </div>
   </Teleport>
+
 </template>
 
 <script setup>
 const props = defineProps({
-  wo: { type: Object, required: true }
+  wo: { type: Object, required: true },
 })
 
 const { apiFetch } = useApi()
 
 const isReplacement = computed(() => props.wo.Replacement?.is_replacement)
 
+const statusClass = computed(() => ({
+  RECEIVED: 'bg-gray-100 text-gray-600 border border-gray-200',
+  QUEUED:   'bg-blue-100 text-blue-700 border border-blue-200',
+  SENT:     'bg-green-100 text-green-700 border border-green-200',
+  ERROR:    'bg-red-100 text-red-700 border border-red-200',
+  SKIPPED:  'bg-gray-100 text-gray-500 border border-gray-200',
+}[props.wo._status ?? 'RECEIVED'] ?? 'bg-gray-100 text-gray-600 border border-gray-200'))
+
 const multiOpen = ref(false)
 const notesOpen = ref(false)
 const docsOpen  = ref(false)
 
-// ── View-only JSON modal ───────────────────────────────────────────────────────
+// ── View-only JSON modal ──────────────────────────────────────────────────────
 const showJson    = ref(false)
 const jsonLoading = ref(false)
 const rawJsonText = ref('')
@@ -264,7 +279,7 @@ const copied      = ref(false)
 
 watch(showJson, async (open) => {
   if (!open) return
-  if (rawJsonText.value) return // already loaded
+  if (rawJsonText.value) return
   jsonLoading.value = true
   try {
     const res = await apiFetch(`/api/workorders/${props.wo.WONum}/data`)

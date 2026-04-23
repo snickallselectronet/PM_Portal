@@ -8,7 +8,27 @@
         <div class="w-2 h-2 rounded-full bg-green-500"></div>
         <span class="text-xs font-medium text-gray-500 tracking-widest uppercase">ElectroNet</span>
       </div>
-      <span class="text-xs text-gray-400 font-mono">PM Portal</span>
+      <ClientOnly>
+        <div v-if="user" class="flex items-center gap-3">
+          <!-- Role badge -->
+          <span
+            v-if="isAdmin"
+            class="text-xs font-bold tracking-wide px-2 py-0.5 rounded bg-amber-100 text-amber-700 border border-amber-200"
+          >ADMIN</span>
+          <span
+            v-else-if="isPM"
+            class="text-xs font-bold tracking-wide px-2 py-0.5 rounded bg-blue-100 text-blue-700 border border-blue-200"
+          >PM</span>
+          <!-- Avatar + email -->
+          <div class="flex items-center gap-2">
+            <div class="w-7 h-7 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-600 uppercase">
+              {{ userInitial }}
+            </div>
+            <span class="text-xs text-gray-500 font-mono hidden sm:block">{{ user.email }}</span>
+          </div>
+        </div>
+        <span v-else class="text-xs text-gray-400 font-mono">PM Portal</span>
+      </ClientOnly>
     </div>
 
     <!-- Main content -->
@@ -146,7 +166,7 @@
         </NuxtLink>
 
         <!-- Logs — admin only -->
-        <NuxtLink v-if="isAdmin"
+        <ClientOnly><NuxtLink v-if="isAdmin"
           to="/logs"
           class="group relative bg-white rounded-xl border border-gray-200 p-8 hover:border-amber-300 hover:shadow-lg transition-all duration-200 overflow-hidden"
         >
@@ -184,10 +204,10 @@
               Per source filtering
             </div>
           </div>
-        </NuxtLink>
+        </NuxtLink></ClientOnly>
 
         <!-- Field Data Processing — admin only -->
-        <NuxtLink v-if="isAdmin"
+        <ClientOnly><NuxtLink v-if="isAdmin"
           to="/fieldlogs"
           class="group relative bg-white rounded-xl border border-gray-200 p-8 hover:border-orange-300 hover:shadow-lg transition-all duration-200 overflow-hidden"
         >
@@ -225,10 +245,10 @@
               Exclusions config
             </div>
           </div>
-        </NuxtLink>
+        </NuxtLink></ClientOnly>
 
         <!-- Config — admin only -->
-        <NuxtLink v-if="isAdmin"
+        <ClientOnly><NuxtLink v-if="isAdmin"
           to="/config"
           class="group relative bg-white rounded-xl border border-gray-200 p-8 hover:border-gray-400 hover:shadow-lg transition-all duration-200 overflow-hidden"
         >
@@ -267,7 +287,7 @@
               Published forms
             </div>
           </div>
-        </NuxtLink>
+        </NuxtLink></ClientOnly>
       </div>
     </div>
 
@@ -286,5 +306,6 @@
 </template>
 
 <script setup>
-const { isAdmin, logout } = useAuth()
+const { user, isAdmin, isPM, logout } = useAuth()
+const userInitial = computed(() => user.value?.email?.[0]?.toUpperCase() ?? '?')
 </script>

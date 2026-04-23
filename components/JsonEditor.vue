@@ -97,8 +97,9 @@
 const props = defineProps({
   modelValue:  { type: Boolean, required: true },
   woNum:       { type: String,  required: true },
-  initialJson: { type: Object,  default: null },  // the version to start editing from
-  currentJson: { type: Object,  default: null },  // always the latest saved
+  initialJson:  { type: Object,  default: null },  // the version to start editing from
+  currentJson:  { type: Object,  default: null },  // always the latest saved
+  ingestLogId:  { type: String,  default: null },  // ingest_log.id to link revision to
 })
 
 const emit = defineEmits(['update:modelValue', 'saved'])
@@ -162,8 +163,9 @@ async function saveEdits() {
     const res = await apiFetch(`/api/workorders/${props.woNum}/save`, {
       method: 'POST',
       body: {
-        raw_data: JSON.parse(editText.value),
-        note: saveNote.value || null,
+        raw_data:      JSON.parse(editText.value),
+        note:          saveNote.value || null,
+        ingest_log_id: props.ingestLogId || null,
       }
     })
     saveSuccess.value = true

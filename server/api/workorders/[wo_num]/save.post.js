@@ -1,5 +1,5 @@
 // server/api/workorders/[wo_num]/save.post.js
-// Saves edited raw_data, reprocesses to processed_data, saves revision,
+// Saves edited raw_data, reprocesses to processed_data, saves revision with ingest_log_id,
 // sets status = QUEUED ready for ArcGIS resend pipeline.
 
 export default defineEventHandler(async (event) => {
@@ -12,9 +12,8 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'raw_data is required' })
   }
 
-  const newRaw = typeof body.raw_data === 'string'
-    ? JSON.parse(body.raw_data)
-    : body.raw_data
+  const newRaw      = typeof body.raw_data === 'string' ? JSON.parse(body.raw_data) : body.raw_data
+  const ingestLogId = body.ingest_log_id ?? null  // uuid of the ingest_log entry this edit belongs to
 
   const headers = {
     'apikey':        cfg.supabaseSecretKey,
@@ -43,13 +42,14 @@ export default defineEventHandler(async (event) => {
       method: 'POST',
       headers: { ...headers, 'Prefer': 'return=minimal' },
       body: JSON.stringify({
-        wo_num:         woNum,
-        field:          'raw_data',
-        previous_value: previousRaw,
-        new_value:      newRaw,
-        changed_by:     user.email,
-        changed_at:     now,
-        note:           body.note || null,
+        wo_num:          woNum,
+        field:           'raw_data',
+        previous_value:  previousRaw,
+        new_value:       newRaw,
+        changed_by:      user.email,
+        changed_at:      now,
+        note:            body.note || null,
+        ingest_log_id:   ingestLogId,
       })
     }),
     fetch(`${cfg.supabaseUrl}/rest/v1/work_orders?wo_num=eq.${encodeURIComponent(woNum)}`, {
@@ -59,7 +59,7 @@ export default defineEventHandler(async (event) => {
         raw_data:       newRaw,
         processed_data: newProcessed,
         is_edited:      true,
-        status:         'QUEUED',   // Mark for ArcGIS resend
+        status:         'QUEUED',
         updated_at:     now,
       })
     })

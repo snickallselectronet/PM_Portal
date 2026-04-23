@@ -4,6 +4,7 @@ export default defineNuxtConfig({
   modules: ['@nuxtjs/tailwindcss'],
   nitro: { preset: 'netlify' },
   runtimeConfig: {
+    arcgisBaseUrl:      process.env.ARCGIS_BASE_URL,
     arcgisWoPoleUrl:    process.env.ARCGIS_WO_POLE_URL,
     arcgisAuroraUrl:    process.env.ARCGIS_AURORA_URL,
     arcgisClientId:     process.env.ARCGIS_CLIENT_ID,

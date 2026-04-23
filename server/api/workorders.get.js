@@ -11,7 +11,7 @@ export default defineEventHandler(async (event) => {
 
   // Fetch work orders with embedded revision count via PostgREST resource embedding
   const url = `${cfg.supabaseUrl}/rest/v1/work_orders`
-    + `?select=wo_num,parent_wo_num,status,is_edited,created_at,received_at,updated_at,processed_data,work_order_revisions(id)`
+    + `?select=wo_num,parent_wo_num,status,is_edited,error_message,created_at,received_at,updated_at,processed_data,work_order_revisions(id)`
     + `&order=wo_num.asc`
     + `&limit=2000`
 
@@ -32,6 +32,7 @@ export default defineEventHandler(async (event) => {
       _status:        row.status,
       _isEdited:      row.is_edited,
       _hasRevisions:  (row.work_order_revisions?.length ?? 0) > 0,
+      _errorMessage:  row.error_message ?? null,
       _createdAt:     row.created_at,
       _receivedAt:    row.received_at,
       _updatedAt:     row.updated_at,
