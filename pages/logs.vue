@@ -1,4 +1,5 @@
 <!-- pages/logs.vue -->
+<!-- File path: pages/logs.vue -->
 <template>
   <div class="min-h-screen bg-gray-50">
     <AppNav />
@@ -150,35 +151,32 @@
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-100">
-            <tr v-for="log in logs" :key="log.id" :class="log.status === 'error' ? 'bg-red-50' : 'hover:bg-gray-50'">
-              <td class="px-4 py-3 text-xs text-gray-500 whitespace-nowrap font-mono">{{ formatDate(log.logged_at) }}</td>
-              <td class="px-4 py-3 font-mono text-xs font-medium text-gray-900">{{ log.wo_num || '—' }}</td>
+            <tr v-for="log in logs" :key="log.id"
+              :class="log.status === 'error' ? 'bg-red-50 hover:bg-red-100' : 'hover:bg-gray-50'"
+              class="transition-colors">
+              <td class="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">{{ formatDate(log.logged_at) }}</td>
+              <td class="px-4 py-3 text-xs font-mono font-medium text-gray-900">{{ log.wo_num || '—' }}</td>
               <td class="px-4 py-3">
-                <span class="px-2 py-0.5 text-xs rounded-full font-medium" :class="sourceClass(log.source)">
+                <span :class="sourceClass(log.source)" class="px-2 py-0.5 rounded-full text-xs font-medium">
                   {{ log.source || '—' }}
                 </span>
               </td>
               <td class="px-4 py-3">
-                <span class="px-2 py-0.5 text-xs rounded-full font-bold" :class="{
-                  'bg-green-100 text-green-700': log.status === 'success',
-                  'bg-red-100 text-red-700':     log.status === 'error',
-                  'bg-gray-100 text-gray-600':   log.status === 'skipped',
-                }">{{ log.status }}</span>
-              </td>
-              <td class="px-4 py-3 text-xs text-gray-700 max-w-sm truncate">
-                {{ log.message }}
-                <span v-if="log.has_revisions"
-                  class="ml-2 inline-flex items-center px-1.5 py-0.5 text-xs font-medium bg-purple-100 text-purple-700 rounded-full border border-purple-200">
-                  Revised
+                <span :class="statusClass(log.status)" class="px-2 py-0.5 rounded-full text-xs font-bold">
+                  {{ log.status }}
                 </span>
               </td>
+              <td class="px-4 py-3 text-xs text-gray-700 max-w-xs truncate">{{ log.message }}</td>
               <td class="px-4 py-3 text-right">
-                <div class="flex items-center justify-end gap-3">
-                  <button v-if="log.wo_num" @click="openWoDetail(log.wo_num, log.id)"
-                    class="text-xs text-blue-600 hover:text-blue-800 hover:underline">
+                <div class="flex items-center justify-end gap-2">
+                  <button v-if="log.wo_num" @click="openWoDetail(log)"
+                    class="px-2 py-1 text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 rounded transition-colors">
                     View WO
                   </button>
-
+                  <button @click="selectedLog = log"
+                    class="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 rounded transition-colors">
+                    Detail
+                  </button>
                 </div>
               </td>
             </tr>
@@ -188,162 +186,120 @@
 
     </div>
 
-    <!-- ════════ WO Detail Modal ════════ -->
+    <!-- WO Detail Drawer -->
     <Teleport to="body">
-      <div v-if="woDetail.show" class="fixed inset-0 z-50 flex items-center justify-center p-4" @click.self="closeWoDetail">
-        <div class="absolute inset-0 bg-black/50" @click="closeWoDetail"/>
-        <div class="relative bg-white rounded-xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col">
+      <div v-if="woDetail.show" class="fixed inset-0 z-40 flex justify-end" @click.self="woDetail.show = false">
+        <div class="absolute inset-0 bg-black/30" @click="woDetail.show = false"/>
+        <div class="relative bg-white w-full max-w-3xl flex flex-col shadow-2xl overflow-hidden">
 
-          <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-            <div class="flex items-center gap-4">
-              <div>
-                <h2 class="text-base font-semibold text-gray-900 font-mono">WO {{ woDetail.woNum }}</h2>
-                <p class="text-xs text-gray-500 mt-0.5">Work order data</p>
-              </div>
-              <span v-if="woDetail.isEdited"
-                class="px-2 py-0.5 text-xs font-bold rounded-full bg-orange-100 text-orange-700 border border-orange-200">
-                Edited
-              </span>
+          <!-- Drawer header -->
+          <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 shrink-0">
+            <div>
+              <h2 class="text-base font-semibold text-gray-900">WO {{ woDetail.woNum }}</h2>
+              <p class="text-xs text-gray-500 mt-0.5">
+                <span v-if="woDetail.isEdited" class="text-amber-600 font-medium mr-2">Edited</span>
+                {{ woDetail.revisions.length }} revision{{ woDetail.revisions.length !== 1 ? 's' : '' }}
+              </p>
             </div>
-            <div class="flex items-center gap-2">
-              <!-- Status badge -->
-              <span v-if="woDetail.woStatus" class="px-2 py-0.5 text-xs font-bold rounded-full"
-                :class="{
-                  'bg-gray-100 text-gray-600 border border-gray-200':  woDetail.woStatus === 'RECEIVED',
-                  'bg-blue-100 text-blue-700 border border-blue-200':  woDetail.woStatus === 'QUEUED',
-                  'bg-green-100 text-green-700 border border-green-200': woDetail.woStatus === 'SENT',
-                  'bg-red-100 text-red-700 border border-red-200':    woDetail.woStatus === 'ERROR',
-                  'bg-gray-100 text-gray-500 border border-gray-200':  woDetail.woStatus === 'SKIPPED',
-                }">{{ woDetail.woStatus }}</span>
-
-              <!-- Reprocess -->
-              <button @click="reprocessWO"
-                :disabled="!!arcgisActionLoading"
-                class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors">
-                <svg v-if="arcgisActionLoading === 'reprocess'" class="h-3.5 w-3.5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-                </svg>
-                {{ arcgisActionLoading === 'reprocess' ? 'Reprocessing…' : 'Reprocess' }}
-              </button>
-
-              <!-- Send to ArcGIS — only when QUEUED -->
-              <button v-if="woDetail.woStatus === 'QUEUED'"
-                @click="sendToArcGIS"
-                :disabled="!!arcgisActionLoading"
-                class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors">
-                <svg v-if="arcgisActionLoading === 'send'" class="h-3.5 w-3.5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-                </svg>
-                {{ arcgisActionLoading === 'send' ? 'Sending…' : 'Send to ArcGIS' }}
-              </button>
-
-              <!-- Delete from ArcGIS — only when arcgis_run present -->
-              <button v-if="woDetail.arcgisRun"
-                @click="confirmArcGISDelete"
-                :disabled="!!arcgisActionLoading"
-                class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors">
-                <svg v-if="arcgisActionLoading === 'delete'" class="h-3.5 w-3.5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-                </svg>
-                {{ arcgisActionLoading === 'delete' ? 'Deleting…' : 'Delete from ArcGIS' }}
-              </button>
-
-              <button @click="closeWoDetail" class="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500">
-                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                </svg>
-              </button>
-            </div>
+            <button @click="woDetail.show = false" class="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500">
+              <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+              </svg>
+            </button>
           </div>
 
-          <!-- Tabs -->
-          <div class="border-b border-gray-200 px-6">
-            <nav class="flex gap-6">
-              <button v-for="tab in woTabs" :key="tab.id"
-                @click="woDetail.tab = tab.id"
-                :class="[
-                  'py-3 text-sm font-medium border-b-2 transition-colors',
-                  woDetail.tab === tab.id ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'
-                ]">
-                {{ tab.label }}
-                <span v-if="tab.id === 'revisions' && woDetail.revisions?.length"
-                  class="ml-1.5 px-1.5 py-0.5 text-xs bg-gray-100 text-gray-600 rounded-full">
-                  {{ woDetail.revisions.length }}
-                </span>
-
-              </button>
-            </nav>
+          <!-- Tab bar -->
+          <div class="flex border-b border-gray-200 shrink-0 px-6">
+            <button v-for="t in woTabs" :key="t.key" @click="woDetail.tab = t.key"
+              :class="[
+                'px-4 py-2.5 text-xs font-medium border-b-2 transition-colors -mb-px',
+                woDetail.tab === t.key ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-800'
+              ]">
+              {{ t.label }}
+            </button>
           </div>
 
-          <!-- ArcGIS action error -->
-          <div v-if="arcgisActionError" class="mx-6 mt-3 px-3 py-2 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700 shrink-0">
-            <span class="font-medium">Error:</span> {{ arcgisActionError }}
-          </div>
+          <!-- Tab content -->
+          <div class="flex-1 overflow-hidden flex flex-col min-h-0">
 
-          <div v-if="woDetail.loading" class="flex-1 flex items-center justify-center py-16">
-            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"/>
-          </div>
-
-          <div v-else class="flex-1 overflow-hidden flex flex-col min-h-0">
-
-            <!-- Raw JSON -->
+            <!-- Raw JSON tab -->
             <div v-if="woDetail.tab === 'raw'" class="flex-1 overflow-hidden flex flex-col min-h-0">
               <div class="px-4 py-2 border-b border-gray-200 bg-gray-50 flex items-center gap-3 shrink-0">
-                <label class="text-xs font-medium text-gray-600 whitespace-nowrap">Version:</label>
-                <select v-model="woDetail.selectedVersion"
-                  class="flex-1 text-xs border border-gray-300 rounded-lg px-3 py-1.5 bg-white focus:ring-2 focus:ring-blue-500">
-                  <option :value="-1">Current (latest saved)</option>
-                  <option v-for="(rev, idx) in woDetail.revisions" :key="rev.id" :value="idx">
-                    {{ formatDate(rev.changed_at) }} — {{ rev.changed_by }}{{ rev.note ? ` — ${rev.note}` : '' }}
+                <span class="text-xs text-gray-500">Version:</span>
+                <select v-model="woDetail.selectedVersion" class="text-xs border border-gray-300 rounded px-2 py-1 bg-white">
+                  <option :value="-1">Current</option>
+                  <option v-for="(rev, i) in woDetail.revisions" :key="rev.id" :value="i">
+                    {{ formatDate(rev.changed_at) }} — {{ rev.changed_by }}{{ rev.note ? ` (${rev.note})` : '' }}
                   </option>
                 </select>
-                <button @click="startRawEdit"
-                  class="px-3 py-1.5 text-xs font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap">
-                  Edit
-                </button>
-                <button v-if="woDetail.selectedVersion >= 0" @click="confirmDeleteRevision"
-                  class="px-3 py-1.5 text-xs font-medium bg-red-50 text-red-600 border border-red-200 rounded-lg hover:bg-red-100 transition-colors whitespace-nowrap">
-                  Delete Version
-                </button>
+                <div class="ml-auto flex items-center gap-2">
+                  <button v-if="woDetail.selectedVersion >= 0" @click="confirmDeleteRevision"
+                    class="px-2 py-1 text-xs bg-red-50 hover:bg-red-100 text-red-700 rounded transition-colors">
+                    Delete revision
+                  </button>
+                  <button v-if="woDetail.selectedVersion >= 0" @click="confirmRestore(woDetail.revisions[woDetail.selectedVersion])"
+                    class="px-2 py-1 text-xs bg-amber-50 hover:bg-amber-100 text-amber-700 rounded transition-colors">
+                    Restore this version
+                  </button>
+                  <button @click="openEditor"
+                    class="px-2 py-1 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors">
+                    Edit
+                  </button>
+                </div>
               </div>
               <div class="flex-1 overflow-auto bg-gray-950 p-4">
-                <pre class="text-xs font-mono text-gray-200 whitespace-pre-wrap">{{ selectedRawJson }}</pre>
+                <pre class="text-xs font-mono text-gray-200 whitespace-pre-wrap">{{ JSON.stringify(
+                  woDetail.selectedVersion === -1
+                    ? woDetail.rawData
+                    : woDetail.revisions[woDetail.selectedVersion]?.previous_value,
+                  null, 2) }}</pre>
               </div>
             </div>
 
-            <!-- ArcGIS Payload -->
+            <!-- ArcGIS Payload tab -->
             <div v-if="woDetail.tab === 'arcgis'" class="flex-1 overflow-hidden flex flex-col min-h-0">
               <div class="px-4 py-2 border-b border-gray-200 bg-gray-50 flex items-center justify-between shrink-0">
                 <span class="text-xs text-gray-500">
                   <template v-if="woDetail.arcgisPayload">
-                    {{ woDetail.arcgisPayload.Assets?.length ?? 0 }} assets · {{ woDetail.arcgisPayload.FormServiceLayer }}
+                    {{ woDetail.arcgisPayload.assets?.length ?? 0 }} assets · {{ woDetail.arcgisPayload.FormServiceLayer }}
                   </template>
                   <template v-else>Not yet processed</template>
                 </span>
                 <div class="flex items-center gap-2">
                   <span v-if="woDetail.woStatus" class="px-2 py-0.5 text-xs rounded-full font-bold"
                     :class="{
-                      'bg-gray-100 text-gray-600':  woDetail.woStatus === 'RECEIVED',
-                      'bg-blue-100 text-blue-700':  woDetail.woStatus === 'QUEUED',
+                      'bg-gray-100 text-gray-600':   woDetail.woStatus === 'RECEIVED',
+                      'bg-blue-100 text-blue-700':   woDetail.woStatus === 'QUEUED',
                       'bg-green-100 text-green-700': woDetail.woStatus === 'SENT',
-                      'bg-red-100 text-red-700':    woDetail.woStatus === 'ERROR',
-                      'bg-gray-100 text-gray-500':  woDetail.woStatus === 'SKIPPED',
+                      'bg-red-100 text-red-700':     woDetail.woStatus === 'ERROR',
+                      'bg-gray-100 text-gray-500':   woDetail.woStatus === 'SKIPPED',
                     }">
                     {{ woDetail.woStatus }}
                   </span>
+                  <button @click="reprocess" :disabled="woDetail.reprocessing"
+                    class="px-2 py-1 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded disabled:opacity-50 transition-colors">
+                    {{ woDetail.reprocessing ? 'Processing…' : 'Reprocess' }}
+                  </button>
+                  <button @click="sendToArcGIS" :disabled="woDetail.sending || !woDetail.arcgisPayload"
+                    class="px-2 py-1 text-xs bg-green-600 hover:bg-green-700 text-white rounded disabled:opacity-50 transition-colors">
+                    {{ woDetail.sending ? 'Sending…' : 'Send to ArcGIS' }}
+                  </button>
+                  <button @click="showDeleteConfirm = true"
+                    class="px-2 py-1 text-xs bg-red-50 hover:bg-red-100 text-red-700 rounded transition-colors">
+                    Delete from ArcGIS
+                  </button>
                 </div>
               </div>
               <div class="flex-1 overflow-auto bg-gray-950 p-4 space-y-4">
                 <pre v-if="woDetail.arcgisPayload" class="text-xs font-mono text-gray-200 whitespace-pre-wrap">{{ JSON.stringify(woDetail.arcgisPayload, null, 2) }}</pre>
                 <p v-else class="text-xs text-gray-500 italic">No ArcGIS payload — run Reprocess first.</p>
-
               </div>
             </div>
 
-            <!-- Run Logs -->
+            <!-- Run Logs tab -->
             <div v-if="woDetail.tab === 'runlogs'" class="flex-1 overflow-hidden flex flex-col min-h-0">
               <div class="px-4 py-2 border-b border-gray-200 bg-gray-50 flex items-center justify-between shrink-0">
-<span class="text-xs text-gray-500">Last ArcGIS send response</span>
+                <span class="text-xs text-gray-500">Last ArcGIS send response</span>
                 <button v-if="woDetail.arcgisRunLogs?.length" @click="copyArcGISLogs"
                   class="px-2 py-1 text-xs bg-gray-200 hover:bg-gray-300 text-gray-700 rounded transition-colors">
                   {{ arcgisLogsCopied ? 'Copied!' : 'Copy' }}
@@ -353,33 +309,11 @@
                 <div v-if="woDetail.arcgisRunLogs?.length" class="space-y-0.5">
                   <div v-for="(log, idx) in woDetail.arcgisRunLogs" :key="idx"
                     class="text-xs font-mono whitespace-pre-wrap"
-                    :class="log.includes('failed') || log.includes('Error') ? 'text-red-400' : log.includes('succeeded') || log.includes('completed') ? 'text-green-400' : 'text-gray-400'">
-                    {{ log }}
+                    :class="log.includes('failed') || log.includes('Error') ? 'text-red-400' : log.includes('succeeded') || log.includes('completed') ? 'text-green-400' : 'text-gray-300'">
+                    <span class="text-gray-600 select-none mr-2">{{ String(idx + 1).padStart(3, '0') }}</span>{{ log }}
                   </div>
                 </div>
-                <p v-else class="text-xs text-gray-500 italic">No run logs yet — logs appear after sending to ArcGIS.</p>
-              </div>
-            </div>
-
-            <!-- Revisions -->
-            <div v-if="woDetail.tab === 'revisions'" class="flex-1 overflow-auto p-4">
-              <div v-if="!woDetail.revisions?.length" class="text-center py-8 text-gray-500 text-sm">No revisions yet.</div>
-              <div v-else class="space-y-3">
-                <div v-for="rev in woDetail.revisions" :key="rev.id"
-                  class="bg-white border border-gray-200 rounded-lg overflow-hidden">
-                  <div class="flex items-center justify-between px-4 py-2 bg-gray-50 border-b border-gray-200">
-                    <div class="flex items-center gap-3">
-                      <span class="text-xs font-mono text-gray-500">{{ formatDate(rev.changed_at) }}</span>
-                      <span class="text-xs text-gray-700 font-medium">{{ rev.changed_by }}</span>
-                      <span v-if="rev.note" class="text-xs text-gray-500 italic">{{ rev.note }}</span>
-                    </div>
-                    <button @click="confirmRestore(rev)"
-                      class="text-xs text-blue-600 hover:text-blue-800 hover:underline">Restore</button>
-                  </div>
-                  <div class="p-3 bg-gray-950 max-h-48 overflow-auto">
-                    <pre class="text-xs font-mono text-gray-400 whitespace-pre-wrap">{{ JSON.stringify(rev.previous_value, null, 2) }}</pre>
-                  </div>
-                </div>
+                <p v-else class="text-xs text-gray-500 italic">No run logs yet.</p>
               </div>
             </div>
 
@@ -388,13 +322,13 @@
       </div>
     </Teleport>
 
-    <!-- Delete from ArcGIS confirm modal -->
+    <!-- Delete from ArcGIS confirm -->
     <Teleport to="body">
-      <div v-if="showDeleteConfirm" class="fixed inset-0 z-[60] flex items-center justify-center p-4">
+      <div v-if="showDeleteConfirm" class="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-black/50" @click="showDeleteConfirm = false"/>
-        <div class="relative bg-white rounded-xl shadow-2xl p-6 max-w-sm w-full">
+        <div class="relative bg-white rounded-xl shadow-2xl w-full max-w-md p-6">
           <h3 class="text-base font-semibold text-gray-900 mb-2">Delete from ArcGIS?</h3>
-          <p class="text-sm text-gray-600 mb-4">This will permanently delete all {{ woDetail.arcgisRun?.assets?.length ?? 0 }} ArcGIS records for WO <strong>{{ woDetail.woNum }}</strong> and reset the status to QUEUED. This cannot be undone.</p>
+          <p class="text-sm text-gray-600 mb-4">This will permanently delete {{ woDetail.arcgisPayload?.assets?.length ?? 0 }} ArcGIS records for WO <strong>{{ woDetail.woNum }}</strong> and reset the status to QUEUED. This cannot be undone.</p>
           <div class="flex justify-end gap-3">
             <button @click="showDeleteConfirm = false"
               class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">
@@ -458,6 +392,7 @@
 
 <script setup>
 const { apiFetch } = useApi()
+const config = useRuntimeConfig()
 
 // ── Manual ingest panel ───────────────────────────────────────────────────────
 const ingestPanel = reactive({
@@ -517,7 +452,7 @@ async function ingestMultipleFiles(files) {
       const res = await apiFetch('/api/workorders/ingest', {
         method:  'POST',
         body:    parsed,
-        headers: { 'x-source': 'manual_ingest', 'x-ingest-secret': 'dev-secret' },
+        headers: { 'x-source': 'manual_ingest', 'x-ingest-secret': config.public.ingestSecret },
       })
       const woNum  = res.wo_num ?? '?'
       const status = res.arcgis_status ?? ''
@@ -541,7 +476,6 @@ async function runManualIngest() {
   ingestPanel.result  = null
   ingestPanel.loading = true
   try {
-    // Validate JSON first
     let parsed
     try {
       parsed = JSON.parse(ingestPanel.json)
@@ -553,11 +487,11 @@ async function runManualIngest() {
     const res = await apiFetch('/api/workorders/ingest', {
       method:  'POST',
       body:    parsed,
-      headers: { 'x-source': 'manual_ingest', 'x-ingest-secret': 'dev-secret' },
+      headers: { 'x-source': 'manual_ingest', 'x-ingest-secret': config.public.ingestSecret },
     })
 
     const woNum  = res.wo_num ?? '?'
-    const status = res.arcgis_status ?? res.arcgis_status
+    const status = res.arcgis_status ?? ''
     ingestPanel.results = [{
       success: true,
       message: `WO ${woNum} ingested successfully — ArcGIS: ${status}${res.reissue ? ' (re-issue)' : ''}`
@@ -601,7 +535,7 @@ const successCount = computed(() => logs.value.filter(l => l.status === 'success
 const errorCount   = computed(() => logs.value.filter(l => l.status === 'error').length)
 
 async function loadLogs() {
-  loading.value  = true
+  loading.value   = true
   loadError.value = ''
   try {
     const params = new URLSearchParams({ limit: '200' })
@@ -626,101 +560,113 @@ function sourceClass(source) {
     import_script:    'bg-purple-100 text-purple-700',
     c_sharp_relay:    'bg-blue-100 text-blue-700',
     test_script:      'bg-yellow-100 text-yellow-700',
-    field_processing: 'bg-orange-100 text-orange-700',
+    field_processing: 'bg-teal-100 text-teal-700',
+    manual_ingest:    'bg-orange-100 text-orange-700',
   }
-  return map[source] || 'bg-gray-100 text-gray-600'
+  return map[source] ?? 'bg-gray-100 text-gray-600'
 }
 
-// ── WO Detail modal ───────────────────────────────────────────────────────────
+function statusClass(status) {
+  const map = {
+    success: 'bg-green-100 text-green-700',
+    error:   'bg-red-100 text-red-700',
+    skipped: 'bg-gray-100 text-gray-500',
+  }
+  return map[status] ?? 'bg-gray-100 text-gray-600'
+}
+
+// ── WO Detail drawer ──────────────────────────────────────────────────────────
 const woTabs = [
-  { id: 'raw',       label: 'Raw JSON' },
-  { id: 'arcgis',    label: 'ArcGIS Payload' },
-  { id: 'runlogs',   label: 'ArcGIS Response' },
-  { id: 'revisions', label: 'Revisions' },
+  { key: 'raw',     label: 'Raw JSON' },
+  { key: 'arcgis',  label: 'ArcGIS Payload' },
+  { key: 'runlogs', label: 'Run Logs' },
 ]
 
 const woDetail = reactive({
   show:            false,
-  loading:         false,
-  woNum:           '',
+  woNum:           null,
   ingestLogId:     null,
   tab:             'raw',
   rawData:         null,
   arcgisPayload:   null,
-  arcgisRun:       null,
-  woStatus:        null,
   arcgisRunLogs:   null,
+  woStatus:        null,
   revisions:       [],
-  isEdited:        false,
   selectedVersion: -1,
+  isEdited:        false,
+  reprocessing:    false,
+  sending:         false,
 })
 
-const selectedRawJson = computed(() => {
-  if (woDetail.selectedVersion === -1) return JSON.stringify(woDetail.rawData, null, 2)
-  return JSON.stringify(woDetail.revisions[woDetail.selectedVersion]?.previous_value ?? null, null, 2)
-})
+const showDeleteConfirm  = ref(false)
+const showEditor         = ref(false)
+const editingJson        = ref(null)
+const arcgisLogsCopied   = ref(false)
 
-async function openWoDetail(woNum, ingestLogId = null) {
-  Object.assign(woDetail, {
-    show: true, loading: true, woNum, ingestLogId, tab: 'raw',
-    rawData: null, processedData: null, revisions: [],
-    isEdited: false, selectedVersion: -1, arcgisRunLogs: null, arcgisRun: null,
-  })
+async function openWoDetail(log) {
+  woDetail.show            = true
+  woDetail.woNum           = log.wo_num
+  woDetail.ingestLogId     = log.id
+  woDetail.tab             = 'raw'
+  woDetail.rawData         = null
+  woDetail.arcgisPayload   = null
+  woDetail.arcgisRunLogs   = null
+  woDetail.woStatus        = null
+  woDetail.revisions       = []
+  woDetail.selectedVersion = -1
+  woDetail.isEdited        = false
+
   try {
-    const params = ingestLogId ? `?ingest_log_id=${ingestLogId}` : ''
-    const res = await apiFetch(`/api/workorders/${woNum}/data${params}`)
+    const params = log.id ? `?ingest_log_id=${log.id}` : ''
+    const res = await apiFetch(`/api/workorders/${log.wo_num}/data${params}`)
     woDetail.rawData       = res.raw_data
     woDetail.arcgisPayload = res.arcgis_payload ?? null
-    woDetail.arcgisRun     = res.arcgis_run     ?? null
-    woDetail.arcgisRunLogs = res.arcgis_run?.runLogs ?? null
+    woDetail.arcgisRunLogs = res.arcgis_run?.logs ?? null
     woDetail.woStatus      = res.status ?? null
     woDetail.revisions     = res.revisions ?? []
-    woDetail.isEdited      = res.is_edited
+    woDetail.isEdited      = res.is_edited ?? false
   } catch (e) {
     loadError.value = e?.data?.statusMessage || e?.message || 'Failed to load WO'
-    woDetail.show = false
-  } finally {
-    woDetail.loading = false
   }
 }
 
-function closeWoDetail() {
-  woDetail.show         = false
-  showEditor.value      = false
-  arcgisActionError.value = ''
-  arcgisActionLoading.value = null
+async function reprocess() {
+  woDetail.reprocessing = true
+  try {
+    const res = await apiFetch(`/api/workorders/${woDetail.woNum}/process`, { method: 'POST' })
+    if (res.payload) woDetail.arcgisPayload = res.payload
+    woDetail.woStatus = res.skipped ? 'SKIPPED' : 'QUEUED'
+  } catch (e) {
+    loadError.value = e?.data?.statusMessage || e?.message || 'Reprocess failed'
+  } finally {
+    woDetail.reprocessing = false
+  }
 }
 
-// ── ArcGIS actions ───────────────────────────────────────────────────────────
-const arcgisActionLoading = ref(null)  // 'reprocess' | 'send' | null
-const arcgisActionError   = ref('')
-const arcgisLogsCopied    = ref(false)
-const showDeleteConfirm   = ref(false)
-
-function confirmArcGISDelete() {
-  showDeleteConfirm.value = true
+async function sendToArcGIS() {
+  woDetail.sending = true
+  try {
+    const res = await apiFetch(`/api/workorders/${woDetail.woNum}/send`, { method: 'POST' })
+    woDetail.arcgisRunLogs = res.logs ?? null
+    woDetail.woStatus      = 'SENT'
+    woDetail.tab           = 'runlogs'
+  } catch (e) {
+    loadError.value = e?.data?.statusMessage || e?.message || 'Send failed'
+  } finally {
+    woDetail.sending = false
+  }
 }
 
 async function deleteFromArcGIS() {
-  showDeleteConfirm.value   = false
-  arcgisActionLoading.value = 'delete'
-  arcgisActionError.value   = ''
-  woDetail.arcgisRunLogs    = null
+  showDeleteConfirm.value = false
   try {
-    const res = await apiFetch(`/api/workorders/${woDetail.woNum}/arcgis-delete`, { method: 'POST' })
-    woDetail.arcgisRunLogs = res.runLogs ?? null
-    // Refresh WO data
-    const data = await apiFetch(`/api/workorders/${woDetail.woNum}/data`)
-    woDetail.arcgisPayload = data.arcgis_payload ?? null
-    woDetail.arcgisRun     = data.arcgis_run     ?? null
-    woDetail.woStatus      = data.status         ?? null
-    woDetail.tab = 'runlogs'
+    await apiFetch(`/api/workorders/${woDetail.woNum}/arcgis`, { method: 'DELETE' })
+    woDetail.woStatus = 'QUEUED'
   } catch (e) {
-    arcgisActionError.value = e?.data?.statusMessage || e?.message || 'Delete failed'
-  } finally {
-    arcgisActionLoading.value = null
+    loadError.value = e?.data?.statusMessage || e?.message || 'Delete failed'
   }
 }
+
 async function copyArcGISLogs() {
   if (!woDetail.arcgisRunLogs?.length) return
   await navigator.clipboard.writeText(woDetail.arcgisRunLogs.join('\n'))
@@ -728,70 +674,24 @@ async function copyArcGISLogs() {
   setTimeout(() => { arcgisLogsCopied.value = false }, 2000)
 }
 
-async function reprocessWO() {
-  arcgisActionLoading.value = 'reprocess'
-  arcgisActionError.value   = ''
-  try {
-    // Use whichever version is currently selected in the Raw JSON tab
-    const rawToProcess = woDetail.selectedVersion === -1
+function openEditor() {
+  editingJson.value =
+    woDetail.selectedVersion === -1
       ? woDetail.rawData
       : woDetail.revisions[woDetail.selectedVersion]?.previous_value
-
-    await apiFetch(`/api/workorders/${woDetail.woNum}/process`, {
-      method: 'POST',
-      body: { raw_data: rawToProcess },
-    })
-    // Reload payload + status
-    const res = await apiFetch(`/api/workorders/${woDetail.woNum}/data`)
-    woDetail.arcgisPayload = res.arcgis_payload ?? null
-    woDetail.woStatus      = res.status ?? null
-  } catch (e) {
-    arcgisActionError.value = e?.data?.statusMessage || e?.message || 'Reprocess failed'
-  } finally {
-    arcgisActionLoading.value = null
-  }
-}
-
-async function sendToArcGIS() {
-  arcgisActionLoading.value = 'send'
-  arcgisActionError.value   = ''
-  woDetail.arcgisRunLogs    = null
-  try {
-    const sendRes = await apiFetch(`/api/workorders/${woDetail.woNum}/send`, { method: 'POST' })
-    woDetail.arcgisRunLogs = sendRes.runLogs ?? null
-    const res = await apiFetch(`/api/workorders/${woDetail.woNum}/data`)
-    woDetail.arcgisPayload = res.arcgis_payload ?? null
-    woDetail.arcgisRun     = res.arcgis_run     ?? null
-    woDetail.woStatus      = res.status ?? null
-    woDetail.tab = 'runlogs'
-  } catch (e) {
-    arcgisActionError.value = e?.data?.statusMessage || e?.message || 'Send failed'
-  } finally {
-    arcgisActionLoading.value = null
-  }
-}
-
-// ── Edit raw JSON ─────────────────────────────────────────────────────────────
-const showEditor  = ref(false)
-const editingJson = ref(null)
-
-function startRawEdit() {
-  editingJson.value = woDetail.selectedVersion === -1
-    ? woDetail.rawData
-    : woDetail.revisions[woDetail.selectedVersion]?.previous_value
   showEditor.value = true
 }
 
 async function onEditSaved() {
   const params = woDetail.ingestLogId ? `?ingest_log_id=${woDetail.ingestLogId}` : ''
   const res = await apiFetch(`/api/workorders/${woDetail.woNum}/data${params}`)
-  woDetail.rawData       = res.raw_data
-  woDetail.arcgisPayload = res.arcgis_payload ?? null
-  woDetail.woStatus      = res.status ?? null
-  woDetail.revisions     = res.revisions ?? []
-  woDetail.isEdited      = true
+  woDetail.rawData         = res.raw_data
+  woDetail.arcgisPayload   = res.arcgis_payload ?? null
+  woDetail.woStatus        = res.status ?? null
+  woDetail.revisions       = res.revisions ?? []
+  woDetail.isEdited        = true
   woDetail.selectedVersion = -1
-  showEditor.value = false
+  showEditor.value         = false
 }
 
 // ── Delete revision ───────────────────────────────────────────────────────────

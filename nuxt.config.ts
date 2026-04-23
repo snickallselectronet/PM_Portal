@@ -18,6 +18,7 @@ export default defineNuxtConfig({
       apiBase:                '/api',
       supabaseUrl:            process.env.SUPABASE_URL,
       supabasePublishableKey: process.env.SUPABASE_PUBLISHABLE_KEY,
+      ingestSecret:           process.env.INGEST_SECRET,
     }
   }
 })
