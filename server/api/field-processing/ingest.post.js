@@ -21,7 +21,63 @@ export default defineEventHandler(async (event) => {
   }
 
   // ── Step 1: Extract attachment metadata ───────────────────────────────────
-  const extracted = extractAttachments(raw)
+  // Two known Survey123 webhook behaviours (confirmed from real payloads):
+  //
+  // CASE A — raw.feature.attachments present:
+  //   Survey123 includes full attachment objects with URLs inline.
+  //   extractAttachments() handles this — fast, no extra network call.
+  //
+  // CASE B — raw.feature.attachments absent:
+  //   Survey123 omits the key entirely even when attachments exist in ArcGIS.
+  //   fetchAttachmentsFromService() queries the Feature Service directly.
+  //   At ingest time the webhook token (raw.portalInfo.token) is still fresh
+  //   so we use that. A fresh client credentials token is used for manual
+  //   refreshes later via the refresh-attachments endpoint.
+
+  const attachmentLogger = {
+    lines: [],
+    log(msg) { this.lines.push(msg); console.log('[AttachmentIngest]', msg) },
+  }
+
+  // Try payload first (Case A)
+  let extracted = extractAttachments(raw)
+  attachmentLogger.log(
+    `Payload extraction (source: ${extracted.source}): ` +
+    `${extracted.attachments.length} photo(s), ${extracted.signatures.length} signature(s).`
+  )
+
+  // If absent or empty, fall back to service query using the webhook token (Case B)
+  if (!extracted.hasAttachments) {
+    const webhookToken = raw?.portalInfo?.token ?? null
+
+    attachmentLogger.log(
+      extracted.source === 'webhook_payload_absent'
+        ? `Attachment key absent from webhook payload — querying ArcGIS Feature Service for OBJECTID ${raw?.feature?.attributes?.OBJECTID}...`
+        : 'Payload attachments empty — querying ArcGIS Feature Service as fallback.'
+    )
+
+    const serviceResult = await fetchAttachmentsFromService(raw, webhookToken, attachmentLogger)
+
+    if (serviceResult.hasAttachments) {
+      attachmentLogger.log(
+        `Service query found ${serviceResult.attachments.length} photo(s) and ` +
+        `${serviceResult.signatures.length} signature(s) — using service result.`
+      )
+      // Preserve the webhook token for viewing — store it on the result
+      extracted = { ...serviceResult, arcgisToken: webhookToken }
+    } else {
+      attachmentLogger.log(
+        'Service query also returned 0 attachments — confirmed no attachments on this submission, ' +
+        'or webhook token has already expired. Use the Refresh button in the UI to re-check.'
+      )
+    }
+  }
+
+  attachmentLogger.log(
+    `Final (source: ${extracted.source}): ` +
+    `${extracted.attachments.length} photo(s), ${extracted.signatures.length} signature(s), ` +
+    `hasAttachments=${extracted.hasAttachments}.`
+  )
 
   // ── Step 2: Insert run record ─────────────────────────────────────────────
   const insertRes = await fetch(`${cfg.supabaseUrl}/rest/v1/field_processing_runs`, {
@@ -60,6 +116,9 @@ export default defineEventHandler(async (event) => {
     runLogs         = [`Fatal error: ${e.message}`]
   }
 
+  // Prepend attachment logs so they're visible in the UI Run Logs tab
+  runLogs = [...attachmentLogger.lines, ...(runLogs ?? [])]
+
   const woNum = result?.WONum ?? null
 
   if (processingError) {
@@ -74,7 +133,6 @@ export default defineEventHandler(async (event) => {
         updated_at:    now,
       })
     })
-    // Return 200 to Survey123 regardless — we don't want it retrying
     return { success: false, run_id: runId, status: 'ERROR', error: processingError }
   }
 
@@ -91,6 +149,5 @@ export default defineEventHandler(async (event) => {
     })
   })
 
-  // Always return 200 so Survey123 doesn't retry
   return { success: true, run_id: runId, wo_num: woNum, status: 'PROCESSED' }
 })

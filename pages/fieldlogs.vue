@@ -50,40 +50,39 @@
           <div class="flex items-center gap-2">
             <label class="text-xs font-medium text-gray-500">WO:</label>
             <input v-model="filterWoNum" @keydown.enter="loadRuns" type="text"
-              placeholder="e.g. 1086"
-              class="text-xs border border-gray-300 rounded-lg px-2 py-1.5 w-24 focus:ring-2 focus:ring-blue-500"/>
+              placeholder="e.g. 12345"
+              class="text-xs border border-gray-300 rounded-lg px-2 py-1.5 w-32 focus:ring-2 focus:ring-blue-500"/>
+            <button @click="loadRuns" class="px-2 py-1.5 bg-gray-100 border border-gray-300 text-gray-700 text-xs rounded-lg hover:bg-gray-200">
+              Search
+            </button>
           </div>
-          <div class="ml-auto flex gap-4 text-xs text-gray-500">
-            <span>{{ runs.length }} runs</span>
-            <span class="text-green-600 font-medium">{{ sentCount }} sent</span>
-            <span class="text-red-600 font-medium">{{ errorCount }} errors</span>
+          <div class="ml-auto flex items-center gap-3 text-xs text-gray-500">
+            <span><span class="font-semibold text-green-700">{{ sentCount }}</span> sent</span>
+            <span><span class="font-semibold text-red-700">{{ errorCount }}</span> errors</span>
+            <span><span class="font-semibold text-gray-700">{{ runs.length }}</span> shown</span>
           </div>
         </div>
       </div>
 
-      <!-- Loading -->
-      <div v-if="loading" class="text-center py-12">
-        <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"/>
-        <p class="mt-2 text-gray-600">Loading runs…</p>
-      </div>
-      <div v-else-if="loadError" class="bg-red-50 border border-red-200 rounded-lg p-4">
-        <p class="text-red-800">{{ loadError }}</p>
-      </div>
-      <div v-else-if="runs.length === 0" class="text-center py-12 text-gray-500">
-        No processing runs found.
+      <!-- Error -->
+      <div v-if="loadError" class="mb-4 px-4 py-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+        {{ loadError }}
       </div>
 
-      <!-- Runs table -->
-      <div v-else class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-        <table class="min-w-full divide-y divide-gray-200 text-sm">
+      <!-- Table -->
+      <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+        <div v-if="loading && !runs.length" class="py-16 text-center text-gray-500 text-sm">Loading…</div>
+        <div v-else-if="!runs.length" class="py-16 text-center text-gray-500 text-sm">No runs found.</div>
+        <table v-else class="min-w-full divide-y divide-gray-200 text-sm">
           <thead class="bg-gray-50">
             <tr>
               <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Received</th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">WO</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">WO #</th>
               <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Attachments</th>
               <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Error</th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sent</th>
-              <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sent At</th>
+              <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider"></th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-100">
@@ -95,6 +94,13 @@
                 <span class="px-2 py-0.5 text-xs rounded-full font-bold" :class="statusClass(run.status)">
                   {{ run.status }}
                 </span>
+              </td>
+              <td class="px-4 py-3">
+                <span v-if="run.attachments?.hasAttachments"
+                  class="px-2 py-0.5 text-xs rounded-full font-medium bg-blue-50 text-blue-700 border border-blue-200">
+                  {{ (run.attachments.attachments?.length ?? 0) + (run.attachments.signatures?.length ?? 0) }} file{{ ((run.attachments.attachments?.length ?? 0) + (run.attachments.signatures?.length ?? 0)) !== 1 ? 's' : '' }}
+                </span>
+                <span v-else class="text-xs text-gray-400">—</span>
               </td>
               <td class="px-4 py-3 text-xs text-red-700 max-w-xs truncate">{{ run.error_message || '—' }}</td>
               <td class="px-4 py-3 text-xs text-gray-500 whitespace-nowrap font-mono">{{ run.sent_at ? formatDate(run.sent_at) : '—' }}</td>
@@ -165,6 +171,11 @@
                 {{ tab.label }}
                 <span v-if="tab.id === 'revisions' && selectedRun.revisions?.length" class="ml-1.5 px-1.5 py-0.5 text-xs bg-gray-100 text-gray-600 rounded-full">{{ selectedRun.revisions.length }}</span>
                 <span v-if="tab.id === 'attachments' && selectedRun.attachments?.hasAttachments" class="ml-1.5 px-1.5 py-0.5 text-xs bg-blue-100 text-blue-600 rounded-full">{{ (selectedRun.attachments.attachments?.length ?? 0) + (selectedRun.attachments.signatures?.length ?? 0) }}</span>
+                <span v-if="tab.id === 'attachments' && attachmentRefreshing" class="ml-1.5">
+                  <svg class="inline h-3 w-3 animate-spin text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                  </svg>
+                </span>
               </button>
             </nav>
           </div>
@@ -244,13 +255,76 @@
               <p v-else class="text-xs text-gray-500 italic">No Power Automate response yet.</p>
             </div>
 
+            <!-- ── S123 Raw Post ── -->
+            <div v-if="detailTab === 'raw'" class="flex-1 overflow-hidden flex flex-col min-h-0">
+              <div class="px-4 py-2 border-b border-gray-200 bg-gray-50 flex items-center justify-between shrink-0">
+                <span class="text-xs text-gray-500">Raw Survey123 webhook payload as received</span>
+                <button
+                  @click="copyRaw"
+                  class="px-3 py-1 bg-white border border-gray-300 text-gray-700 text-xs font-medium rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-1.5">
+                  <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                  </svg>
+                  {{ rawCopied ? 'Copied!' : 'Copy' }}
+                </button>
+              </div>
+              <div class="flex-1 overflow-auto bg-gray-950 p-4">
+                <pre class="text-xs font-mono text-gray-200 whitespace-pre-wrap">{{ JSON.stringify(selectedRun.survey123_input, null, 2) }}</pre>
+              </div>
+            </div>
+
             <!-- ── Attachments ── -->
             <div v-if="detailTab === 'attachments'" class="flex-1 overflow-auto p-4">
-              <div v-if="tokenLoading" class="text-center py-8 text-gray-500 text-sm">Loading attachment access…</div>
-              <div v-else-if="!selectedRun.attachments?.hasAttachments" class="text-center py-8 text-gray-500 text-sm">
-                No attachments on this run.
+
+              <!-- Auto-refreshing indicator -->
+              <div v-if="attachmentRefreshing && !selectedRun.attachments?.hasAttachments"
+                class="text-center py-8 text-gray-500 text-sm">
+                <svg class="h-5 w-5 animate-spin mx-auto mb-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                </svg>
+                Checking ArcGIS for attachments…
               </div>
+
+              <!-- No attachments (after check completed) -->
+              <div v-else-if="!selectedRun.attachments?.hasAttachments" class="text-center py-8 text-gray-500 text-sm">
+                <p class="mb-3">No attachments found on this run.</p>
+                <button @click="refreshAttachments"
+                  :disabled="attachmentRefreshing"
+                  class="px-3 py-1.5 bg-white border border-gray-300 text-gray-700 text-xs font-medium rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors flex items-center gap-1.5 mx-auto">
+                  <svg class="h-3.5 w-3.5" :class="{ 'animate-spin': attachmentRefreshing }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                  </svg>
+                  {{ attachmentRefreshing ? 'Checking…' : 'Try Again' }}
+                </button>
+                <p v-if="attachmentRefreshError" class="mt-3 text-xs text-red-600">{{ attachmentRefreshError }}</p>
+                <p v-if="attachmentRefreshMsg" class="mt-3 text-xs text-gray-500">{{ attachmentRefreshMsg }}</p>
+              </div>
+
+              <!-- Has attachments -->
               <div v-else class="space-y-4">
+                <!-- Toolbar -->
+                <div class="flex items-center justify-between">
+                  <span class="text-xs text-gray-400">
+                    Source: <span class="font-medium text-gray-600">{{ selectedRun.attachments?.source ?? 'unknown' }}</span>
+                  </span>
+                  <div class="flex items-center gap-2">
+                    <p v-if="attachmentRefreshMsg" class="text-xs text-gray-500">{{ attachmentRefreshMsg }}</p>
+                    <p v-if="attachmentRefreshError" class="text-xs text-red-600">{{ attachmentRefreshError }}</p>
+                    <button @click="refreshAttachments" :disabled="attachmentRefreshing"
+                      class="px-3 py-1 bg-white border border-gray-300 text-gray-700 text-xs font-medium rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors flex items-center gap-1.5">
+                      <svg class="h-3 w-3" :class="{ 'animate-spin': attachmentRefreshing }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                      </svg>
+                      {{ attachmentRefreshing ? 'Checking…' : 'Refresh' }}
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Photos -->
                 <div v-if="selectedRun.attachments?.attachments?.length">
                   <h3 class="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2">Photos ({{ selectedRun.attachments.attachments.length }})</h3>
                   <div class="space-y-2">
@@ -270,6 +344,8 @@
                     </div>
                   </div>
                 </div>
+
+                <!-- Signatures -->
                 <div v-if="selectedRun.attachments?.signatures?.length">
                   <h3 class="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2">Signatures ({{ selectedRun.attachments.signatures.length }})</h3>
                   <div class="space-y-2">
@@ -377,7 +453,9 @@
                   <td class="px-4 py-2 text-center">
                     <button @click="toggleExclusion(ex)"
                       :class="['inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border transition-colors',
-                        ex.is_active ? 'bg-green-100 text-green-700 border-green-200 hover:bg-green-200' : 'bg-gray-100 text-gray-500 border-gray-200 hover:bg-gray-200']">
+                        ex.is_active
+                          ? 'bg-green-100 text-green-700 border-green-200 hover:bg-green-200'
+                          : 'bg-gray-100 text-gray-500 border-gray-200 hover:bg-gray-200']">
                       {{ ex.is_active ? 'Active' : 'Inactive' }}
                     </button>
                   </td>
@@ -478,33 +556,49 @@ function formatDate(iso) {
 const selectedRun = ref(null)
 const detailTab   = ref('logs')
 const detailTabs  = [
-  { id: 'logs',      label: 'Run Logs' },
-  { id: 'output',    label: 'Processed Output' },
+  { id: 'logs',        label: 'Run Logs' },
+  { id: 'output',      label: 'Processed Output' },
   { id: 'attachments', label: 'Attachments', badge: true },
-  { id: 'pa',        label: 'PA Response' },
-  { id: 'revisions', label: 'Revisions' },
+  { id: 'pa',          label: 'PA Response' },
+  { id: 'raw',         label: 'S123 Raw Post' },
+  { id: 'revisions',   label: 'Revisions' },
 ]
 
 async function openDetail(run) {
-  detailTab.value     = 'logs'
-  editingOutput.value = false
-  sendError.value     = ''
-  selectedRun.value   = null
+  detailTab.value              = 'logs'
+  editingOutput.value          = false
+  sendError.value              = ''
+  rawCopied.value              = false
+  attachmentRefreshing.value   = false
+  attachmentRefreshError.value = ''
+  attachmentRefreshMsg.value   = ''
+  selectedRun.value            = null
+
   try {
     selectedRun.value = await apiFetch(`/api/field-processing/runs/${run.id}`)
   } catch (e) {
     loadError.value = e?.data?.statusMessage || e?.message || 'Failed to load run detail'
+    return
+  }
+
+  // Auto-check ArcGIS for attachments if none are stored yet
+  if (!selectedRun.value?.attachments?.hasAttachments) {
+    refreshAttachments()
   }
 }
 
 function closeDetail() {
-  selectedRun.value   = null
-  editingOutput.value = false
-  editValue.value     = ''
-  editNote.value      = ''
-  editJsonError.value = ''
-  sendError.value     = ''
-  freshToken.value    = ''
+  selectedRun.value            = null
+  editingOutput.value          = false
+  editValue.value              = ''
+  editNote.value               = ''
+  editJsonError.value          = ''
+  sendError.value              = ''
+  freshToken.value             = ''
+  rawCopied.value              = false
+  attachmentRefreshing.value   = false
+  attachmentRefreshError.value = ''
+  attachmentRefreshMsg.value   = ''
 }
 
 // ── Edit processed output ─────────────────────────────────────────────────────
@@ -678,8 +772,8 @@ async function doDeleteExclusion(ex) {
   }
 }
 
-// ── Fresh ArcGIS token for attachment viewing ─────────────────────────────
-const freshToken  = ref('')
+// ── Fresh ArcGIS token for attachment viewing ─────────────────────────────────
+const freshToken   = ref('')
 const tokenLoading = ref(false)
 
 async function switchTab(id) {
@@ -695,6 +789,57 @@ async function switchTab(id) {
       tokenLoading.value = false
     }
   }
+}
+
+// ── Refresh attachments from ArcGIS ──────────────────────────────────────────
+const attachmentRefreshing   = ref(false)
+const attachmentRefreshError = ref('')
+const attachmentRefreshMsg   = ref('')
+
+async function refreshAttachments() {
+  if (!selectedRun.value) return
+  attachmentRefreshing.value   = true
+  attachmentRefreshError.value = ''
+  attachmentRefreshMsg.value   = ''
+  freshToken.value             = ''
+  try {
+    const res = await apiFetch(
+      `/api/field-processing/runs/${selectedRun.value.id}/refresh-attachments`,
+      { method: 'POST' }
+    )
+    // Reload the full run so the UI reflects the updated attachments column
+    selectedRun.value = await apiFetch(`/api/field-processing/runs/${selectedRun.value.id}`)
+
+    // Also update the count in the table row so it reflects without a full reload
+    const idx = runs.value.findIndex(r => r.id === selectedRun.value.id)
+    if (idx >= 0) runs.value[idx] = { ...runs.value[idx], attachments: selectedRun.value.attachments }
+
+    if (res.hasAttachments) {
+      // Get a fresh token now that we have attachments to display
+      try {
+        const tokenRes = await apiFetch('/api/field-processing/arcgis-token')
+        freshToken.value = tokenRes.token
+      } catch { /* silent */ }
+      attachmentRefreshMsg.value = `Found ${res.attachments} photo(s) and ${res.signatures} signature(s).`
+    } else {
+      attachmentRefreshMsg.value = 'ArcGIS confirms no attachments on this feature.'
+    }
+  } catch (e) {
+    attachmentRefreshError.value = e?.data?.statusMessage || e?.message || 'Refresh failed'
+  } finally {
+    attachmentRefreshing.value = false
+  }
+}
+
+// ── Raw S123 copy ─────────────────────────────────────────────────────────────
+const rawCopied = ref(false)
+
+async function copyRaw() {
+  try {
+    await navigator.clipboard.writeText(JSON.stringify(selectedRun.value.survey123_input, null, 2))
+    rawCopied.value = true
+    setTimeout(() => { rawCopied.value = false }, 2000)
+  } catch { /* silent */ }
 }
 
 onMounted(loadRuns)

@@ -11,7 +11,7 @@ export default defineEventHandler(async (event) => {
   const woNum  = query.wo_num || ''
 
   let url = `${cfg.supabaseUrl}/rest/v1/field_processing_runs`
-    + `?select=id,wo_num,status,error_message,received_at,sent_at,updated_at`
+    + `?select=id,wo_num,status,error_message,received_at,sent_at,updated_at,attachments`
     + `&order=received_at.desc`
     + `&limit=${limit}`
 
